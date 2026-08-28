@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const document = await prisma.document.findFirstOrThrow({ where: { id: Number(params.id), clubId } });
     const buffer = await fs.readFile(getFileAbsolutePath(document.filePath));
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": document.mimeType,
         "Content-Disposition": `inline; filename="${document.fileName}"`,
