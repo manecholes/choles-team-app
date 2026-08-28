@@ -25,13 +25,22 @@ interface Team {
   _count: { teamPlayers: number };
 }
 
-const emptyForm = {
+interface TeamForm {
+  name: string;
+  categoryId: string | number;
+  branch: string;
+  coachId: string | number;
+  delegateId: string | number;
+  status: "ACTIVE" | "INACTIVE";
+}
+
+const emptyForm: TeamForm = {
   name: "",
-  categoryId: "" as string | number,
-  branch: "MIXTO" as const,
-  coachId: "" as string | number,
-  delegateId: "" as string | number,
-  status: "ACTIVE" as const,
+  categoryId: "",
+  branch: "MIXTO",
+  coachId: "",
+  delegateId: "",
+  status: "ACTIVE",
 };
 
 export default function EquiposPage() {
