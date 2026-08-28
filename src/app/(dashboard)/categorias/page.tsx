@@ -27,15 +27,26 @@ interface Category {
 
 const BRANCH_LABEL: Record<string, string> = { MASCULINO: "Masculino", FEMENINO: "Femenino", MIXTO: "Mixto" };
 
-const emptyForm = {
+interface CategoryForm {
+  name: string;
+  minAge: number;
+  maxAge: number;
+  branch: "MASCULINO" | "FEMENINO" | "MIXTO";
+  coachId: string | number;
+  schedule: string;
+  court: string;
+  status: "ACTIVE" | "INACTIVE";
+}
+
+const emptyForm: CategoryForm = {
   name: "",
   minAge: 8,
   maxAge: 10,
-  branch: "MIXTO" as const,
-  coachId: "" as string | number,
+  branch: "MIXTO",
+  coachId: "",
   schedule: "",
   court: "",
-  status: "ACTIVE" as const,
+  status: "ACTIVE",
 };
 
 export default function CategoriasPage() {
@@ -44,7 +55,7 @@ export default function CategoriasPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
-  const [form, setForm] = useState<typeof emptyForm>(emptyForm);
+  const [form, setForm] = useState<CategoryForm>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
