@@ -1,72 +1,71 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
 
-interface Ref {
+interface Coach {
   id: number;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
 }
 
-interface Team {
+interface Category {
   id: number;
   name: string;
-  branch: string;
+  minAge: number;
+  maxAge: number;
+  branch: "MASCULINO" | "FEMENINO" | "MIXTO";
+  schedule: string | null;
+  court: string | null;
   status: "ACTIVE" | "INACTIVE";
-  category: Ref;
-  coach: Ref | null;
-  delegate: Ref | null;
-  _count: { teamPlayers: number };
+  coach: Coach | null;
+  _count: { players: number; teams: number };
 }
 
-interface TeamForm {
+const BRANCH_LABEL: Record<string, string> = { MASCULINO: "Masculino", FEMENINO: "Femenino", MIXTO: "Mixto" };
+
+interface CategoryForm {
   name: string;
-  categoryId: string | number;
-  branch: string;
+  minAge: number;
+  maxAge: number;
+  branch: "MASCULINO" | "FEMENINO" | "MIXTO";
   coachId: string | number;
-  delegateId: string | number;
+  schedule: string;
+  court: string;
   status: "ACTIVE" | "INACTIVE";
 }
 
-const emptyForm: TeamForm = {
+const emptyForm: CategoryForm = {
   name: "",
-  categoryId: "",
+  minAge: 8,
+  maxAge: 10,
   branch: "MIXTO",
   coachId: "",
-  delegateId: "",
+  schedule: "",
+  court: "",
   status: "ACTIVE",
 };
 
-export default function EquiposPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [categories, setCategories] = useState<Ref[]>([]);
-  const [coaches, setCoaches] = useState<Ref[]>([]);
-  const [delegates, setDelegates] = useState<Ref[]>([]);
+export default function CategoriasPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Team | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [form, setForm] = useState<CategoryForm>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function loadData() {
     setLoading(true);
-    const [teamsRes, catsRes, coachesRes, delegatesRes] = await Promise.all([
-      fetch("/api/teams"),
-      fetch("/api/categories"),
-      fetch("/api/coaches"),
-      fetch("/api/delegates"),
-    ]);
-    setTeams((await teamsRes.json()).teams ?? []);
-    setCategories((await catsRes.json()).categories ?? []);
-    setCoaches((await coachesRes.json()).coaches ?? []);
-    setDelegates((await delegatesRes.json()).delegates ?? []);
+    const [catsRes, coachesRes] = await Promise.all([fetch("/api/categories"), fetch("/api/coaches")]);
+    const catsData = await catsRes.json();
+    const coachesData = await coachesRes.json();
+    setCategories(catsData.categories ?? []);
+    setCoaches(coachesData.coaches ?? []);
     setLoading(false);
   }
 
@@ -81,15 +80,17 @@ export default function EquiposPage() {
     setModalOpen(true);
   }
 
-  function openEdit(team: Team) {
-    setEditing(team);
+  function openEdit(cat: Category) {
+    setEditing(cat);
     setForm({
-      name: team.name,
-      categoryId: team.category.id,
-      branch: team.branch as any,
-      coachId: team.coach?.id ?? "",
-      delegateId: team.delegate?.id ?? "",
-      status: team.status,
+      name: cat.name,
+      minAge: cat.minAge,
+      maxAge: cat.maxAge,
+      branch: cat.branch,
+      coachId: cat.coach?.id ?? "",
+      schedule: cat.schedule ?? "",
+      court: cat.court ?? "",
+      status: cat.status,
     });
     setError(null);
     setModalOpen(true);
@@ -100,19 +101,15 @@ export default function EquiposPage() {
     setSaving(true);
     setError(null);
     try {
-      const payload = {
-        ...form,
-        coachId: form.coachId || null,
-        delegateId: form.delegateId || null,
-      };
-      const res = await fetch(editing ? `/api/teams/${editing.id}` : "/api/teams", {
+      const payload = { ...form, coachId: form.coachId || null };
+      const res = await fetch(editing ? `/api/categories/${editing.id}` : "/api/categories", {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "No se pudo guardar el equipo");
+        setError(data.error ?? "No se pudo guardar la categoria");
         return;
       }
       setModalOpen(false);
@@ -122,9 +119,9 @@ export default function EquiposPage() {
     }
   }
 
-  async function handleDelete(team: Team) {
-    if (!confirm(`¿Eliminar el equipo "${team.name}"?`)) return;
-    const res = await fetch(`/api/teams/${team.id}`, { method: "DELETE" });
+  async function handleDelete(cat: Category) {
+    if (!confirm(`¿Eliminar la categoria "${cat.name}"? Esta accion no se puede deshacer.`)) return;
+    const res = await fetch(`/api/categories/${cat.id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
       alert(data.error ?? "No se pudo eliminar");
@@ -133,41 +130,31 @@ export default function EquiposPage() {
     await loadData();
   }
 
-  const columns: Column<Team>[] = [
-    {
-      key: "name",
-      header: "Equipo",
-      render: (t) => (
-        <Link href={`/equipos/${t.id}`} className="font-medium text-turqui-700 hover:underline">
-          {t.name}
-        </Link>
-      ),
-      searchValue: (t) => t.name,
-    },
-    { key: "category", header: "Categoria", render: (t) => t.category.name },
-    { key: "coach", header: "Entrenador", render: (t) => (t.coach ? `${t.coach.firstName} ${t.coach.lastName}` : "-") },
-    { key: "delegate", header: "Delegado", render: (t) => (t.delegate ? `${t.delegate.firstName} ${t.delegate.lastName}` : "-") },
-    { key: "players", header: "Jugadores", render: (t) => t._count.teamPlayers },
+  const columns: Column<Category>[] = [
+    { key: "name", header: "Categoria", render: (c) => <span className="font-medium">{c.name}</span>, searchValue: (c) => c.name },
+    { key: "age", header: "Edad", render: (c) => `${c.minAge} - ${c.maxAge} anos` },
+    { key: "branch", header: "Rama", render: (c) => BRANCH_LABEL[c.branch] },
+    { key: "coach", header: "Entrenador", render: (c) => (c.coach ? `${c.coach.firstName} ${c.coach.lastName}` : "-") },
+    { key: "schedule", header: "Horario", render: (c) => c.schedule ?? "-" },
+    { key: "court", header: "Cancha", render: (c) => c.court ?? "-" },
+    { key: "players", header: "Jugadores", render: (c) => c._count.players },
     {
       key: "status",
       header: "Estado",
-      render: (t) => {
-        const b = statusBadge("team", t.status);
+      render: (c) => {
+        const b = statusBadge("category", c.status);
         return <Badge tone={b.tone}>{b.label}</Badge>;
       },
     },
     {
       key: "actions",
       header: "",
-      render: (t) => (
+      render: (c) => (
         <div className="flex gap-2">
-          <Link href={`/equipos/${t.id}`} className="btn-ghost">
-            <Eye className="h-4 w-4" />
-          </Link>
-          <button className="btn-ghost" onClick={() => openEdit(t)}>
+          <button className="btn-ghost" onClick={() => openEdit(c)}>
             <Pencil className="h-4 w-4" />
           </button>
-          <button className="btn-ghost text-choles-red" onClick={() => handleDelete(t)}>
+          <button className="btn-ghost text-choles-red" onClick={() => handleDelete(c)}>
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
@@ -177,9 +164,11 @@ export default function EquiposPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">Equipos</h1>
-        <p className="text-sm text-slate-500">Administra los equipos del club por categoria y temporada.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Categorias</h1>
+          <p className="text-sm text-slate-500">Configura las categorias deportivas del club.</p>
+        </div>
       </div>
 
       {loading ? (
@@ -187,32 +176,31 @@ export default function EquiposPage() {
       ) : (
         <DataTable
           columns={columns}
-          rows={teams}
-          searchPlaceholder="Buscar equipo..."
+          rows={categories}
+          searchPlaceholder="Buscar categoria..."
           actions={
             <button className="btn-primary" onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Nuevo equipo
+              <Plus className="h-4 w-4" /> Nueva categoria
             </button>
           }
         />
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Editar equipo" : "Nuevo equipo"}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Editar categoria" : "Nueva categoria"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Nombre</label>
-            <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="U12" />
           </div>
-          <div>
-            <label className="label">Categoria</label>
-            <select className="input" required value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
-              <option value="">Selecciona una categoria</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Edad minima</label>
+              <input type="number" className="input" required value={form.minAge} onChange={(e) => setForm({ ...form, minAge: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="label">Edad maxima</label>
+              <input type="number" className="input" required value={form.maxAge} onChange={(e) => setForm({ ...form, maxAge: Number(e.target.value) })} />
+            </div>
           </div>
           <div>
             <label className="label">Rama</label>
@@ -234,21 +222,18 @@ export default function EquiposPage() {
             </select>
           </div>
           <div>
-            <label className="label">Delegado</label>
-            <select className="input" value={form.delegateId} onChange={(e) => setForm({ ...form, delegateId: e.target.value })}>
-              <option value="">Sin asignar</option>
-              {delegates.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.firstName} {d.lastName}
-                </option>
-              ))}
-            </select>
+            <label className="label">Horario</label>
+            <input className="input" value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value })} placeholder="Lun y Mie 4:00pm - 5:30pm" />
+          </div>
+          <div>
+            <label className="label">Cancha</label>
+            <input className="input" value={form.court} onChange={(e) => setForm({ ...form, court: e.target.value })} />
           </div>
           <div>
             <label className="label">Estado</label>
             <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as any })}>
-              <option value="ACTIVE">Activo</option>
-              <option value="INACTIVE">Inactivo</option>
+              <option value="ACTIVE">Activa</option>
+              <option value="INACTIVE">Inactiva</option>
             </select>
           </div>
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
