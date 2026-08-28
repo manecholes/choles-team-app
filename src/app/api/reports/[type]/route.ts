@@ -58,7 +58,7 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
         data.columns.map((c) => ({ header: c.header, key: c.key })),
         data.rows
       );
-      return new NextResponse(buffer, {
+      return new NextResponse(new Uint8Array(buffer), {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": `attachment; filename="${type}.csv"`,
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
 
     if (format === "xlsx") {
       const buffer = await buildExcelBuffer(data.title, data.columns, data.rows);
-      return new NextResponse(buffer, {
+      return new NextResponse(new Uint8Array(buffer), {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "Content-Disposition": `attachment; filename="${type}.xlsx"`,
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
 
     if (format === "pdf") {
       const bytes = await generateTablePdf(data.title, data.columns, data.rows);
-      return new NextResponse(Buffer.from(bytes), {
+      return new NextResponse(new Uint8Array(bytes), {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `inline; filename="${type}.pdf"`,
