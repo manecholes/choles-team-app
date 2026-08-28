@@ -113,7 +113,7 @@ export async function getPlayerProfile(clubId: number, playerId: number) {
     where: { id: playerId, clubId },
     include: {
       category: true,
-      guardians: { include: { guardian: true } },
+      guardians: { include: { guardian: { include: { user: { select: { id: true, email: true } } } } } },
       teamPlayers: { include: { team: true, season: true }, orderBy: { joinedAt: "desc" } },
     },
   });

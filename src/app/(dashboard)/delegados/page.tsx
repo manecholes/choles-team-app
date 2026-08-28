@@ -7,35 +7,34 @@ import { Modal } from "@/components/Modal";
 import { Badge } from "@/components/Badge";
 import { CreateAccessModal } from "@/components/CreateAccessModal";
 
-interface Coach {
+interface Delegate {
   id: number;
   firstName: string;
   lastName: string;
   phone: string | null;
   email: string | null;
-  specialty: string | null;
   active: boolean;
-  _count: { teams: number; categories: number };
+  _count: { teams: number };
   user: { id: number; email: string } | null;
 }
 
-const emptyForm = { firstName: "", lastName: "", phone: "", email: "", specialty: "", active: true };
+const emptyForm = { firstName: "", lastName: "", phone: "", email: "", active: true };
 
-export default function EntrenadoresPage() {
-  const [coaches, setCoaches] = useState<Coach[]>([]);
+export default function DelegadosPage() {
+  const [delegates, setDelegates] = useState<Delegate[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Coach | null>(null);
+  const [editing, setEditing] = useState<Delegate | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [accessTarget, setAccessTarget] = useState<Coach | null>(null);
+  const [accessTarget, setAccessTarget] = useState<Delegate | null>(null);
 
   async function loadData() {
     setLoading(true);
-    const res = await fetch("/api/coaches");
+    const res = await fetch("/api/delegates");
     const data = await res.json();
-    setCoaches(data.coaches ?? []);
+    setDelegates(data.delegates ?? []);
     setLoading(false);
   }
 
@@ -50,15 +49,14 @@ export default function EntrenadoresPage() {
     setModalOpen(true);
   }
 
-  function openEdit(c: Coach) {
-    setEditing(c);
+  function openEdit(d: Delegate) {
+    setEditing(d);
     setForm({
-      firstName: c.firstName,
-      lastName: c.lastName,
-      phone: c.phone ?? "",
-      email: c.email ?? "",
-      specialty: c.specialty ?? "",
-      active: c.active,
+      firstName: d.firstName,
+      lastName: d.lastName,
+      phone: d.phone ?? "",
+      email: d.email ?? "",
+      active: d.active,
     });
     setError(null);
     setModalOpen(true);
@@ -69,7 +67,7 @@ export default function EntrenadoresPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(editing ? `/api/coaches/${editing.id}` : "/api/coaches", {
+      const res = await fetch(editing ? `/api/delegates/${editing.id}` : "/api/delegates", {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -86,40 +84,39 @@ export default function EntrenadoresPage() {
     }
   }
 
-  async function handleDeactivate(c: Coach) {
-    if (!confirm(`¿Marcar a ${c.firstName} ${c.lastName} como inactivo?`)) return;
-    await fetch(`/api/coaches/${c.id}`, { method: "DELETE" });
+  async function handleDeactivate(d: Delegate) {
+    if (!confirm(`¿Marcar a ${d.firstName} ${d.lastName} como inactivo?`)) return;
+    await fetch(`/api/delegates/${d.id}`, { method: "DELETE" });
     await loadData();
   }
 
-  const columns: Column<Coach>[] = [
+  const columns: Column<Delegate>[] = [
     {
       key: "name",
       header: "Nombre",
-      render: (c) => (
+      render: (d) => (
         <span className="font-medium">
-          {c.firstName} {c.lastName}
+          {d.firstName} {d.lastName}
         </span>
       ),
-      searchValue: (c) => `${c.firstName} ${c.lastName}`,
+      searchValue: (d) => `${d.firstName} ${d.lastName}`,
     },
-    { key: "specialty", header: "Especialidad", render: (c) => c.specialty ?? "-" },
-    { key: "phone", header: "Telefono", render: (c) => c.phone ?? "-" },
-    { key: "email", header: "Correo", render: (c) => c.email ?? "-" },
-    { key: "teams", header: "Equipos", render: (c) => c._count.teams },
+    { key: "phone", header: "Telefono", render: (d) => d.phone ?? "-" },
+    { key: "email", header: "Correo", render: (d) => d.email ?? "-" },
+    { key: "teams", header: "Equipos", render: (d) => d._count.teams },
     {
       key: "status",
       header: "Estado",
-      render: (c) => <Badge tone={c.active ? "green" : "gray"}>{c.active ? "Activo" : "Inactivo"}</Badge>,
+      render: (d) => <Badge tone={d.active ? "green" : "gray"}>{d.active ? "Activo" : "Inactivo"}</Badge>,
     },
     {
       key: "access",
       header: "Acceso a la app",
-      render: (c) =>
-        c.user ? (
-          <span className="text-sm text-slate-500">{c.user.email}</span>
+      render: (d) =>
+        d.user ? (
+          <span className="text-sm text-slate-500">{d.user.email}</span>
         ) : (
-          <button className="btn-secondary" onClick={() => setAccessTarget(c)}>
+          <button className="btn-secondary" onClick={() => setAccessTarget(d)}>
             <KeyRound className="h-4 w-4" /> Crear acceso
           </button>
         ),
@@ -127,13 +124,13 @@ export default function EntrenadoresPage() {
     {
       key: "actions",
       header: "",
-      render: (c) => (
+      render: (d) => (
         <div className="flex gap-2">
-          <button className="btn-ghost" onClick={() => openEdit(c)}>
+          <button className="btn-ghost" onClick={() => openEdit(d)}>
             <Pencil className="h-4 w-4" />
           </button>
-          {c.active && (
-            <button className="btn-ghost text-choles-red" onClick={() => handleDeactivate(c)}>
+          {d.active && (
+            <button className="btn-ghost text-choles-red" onClick={() => handleDeactivate(d)}>
               <Ban className="h-4 w-4" />
             </button>
           )}
@@ -145,8 +142,8 @@ export default function EntrenadoresPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Entrenadores</h1>
-        <p className="text-sm text-slate-500">Gestiona el cuerpo tecnico del club.</p>
+        <h1 className="text-xl font-bold text-slate-800">Delegados</h1>
+        <p className="text-sm text-slate-500">Gestiona los delegados de categoria/equipo del club.</p>
       </div>
 
       {loading ? (
@@ -154,17 +151,17 @@ export default function EntrenadoresPage() {
       ) : (
         <DataTable
           columns={columns}
-          rows={coaches}
-          searchPlaceholder="Buscar entrenador..."
+          rows={delegates}
+          searchPlaceholder="Buscar delegado..."
           actions={
             <button className="btn-primary" onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Nuevo entrenador
+              <Plus className="h-4 w-4" /> Nuevo delegado
             </button>
           }
         />
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Editar entrenador" : "Nuevo entrenador"}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Editar delegado" : "Nuevo delegado"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -175,10 +172,6 @@ export default function EntrenadoresPage() {
               <label className="label">Apellidos</label>
               <input className="input" required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
             </div>
-          </div>
-          <div>
-            <label className="label">Especialidad</label>
-            <input className="input" value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -201,7 +194,7 @@ export default function EntrenadoresPage() {
         open={!!accessTarget}
         onClose={() => setAccessTarget(null)}
         title={`Crear acceso para ${accessTarget?.firstName ?? ""} ${accessTarget?.lastName ?? ""}`}
-        endpoint={accessTarget ? `/api/coaches/${accessTarget.id}/user` : ""}
+        endpoint={accessTarget ? `/api/delegates/${accessTarget.id}/user` : ""}
         defaultEmail={accessTarget?.email ?? ""}
         onCreated={loadData}
       />

@@ -1,7 +1,29 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { hashPassword, ForbiddenError } from "@/lib/auth";
 import { attendancePercentage, type AttendanceStatus as AttStatus } from "@/server/logic/attendance";
 import { effectiveStatus, daysOverdue } from "@/server/logic/cartera";
+
+/**
+ * Crea el acceso (usuario/contrasena) para un padre/tutor ya registrado
+ * (vinculado a uno o mas jugadores desde la pestana "Familia"). Igual que
+ * con entrenadores/delegados, registrar el contacto y darle acceso a la
+ * app son pasos separados a proposito.
+ */
+export async function createGuardianUserAccess(clubId: number, guardianId: number, email: string, password: string) {
+  const guardian = await prisma.guardian.findFirstOrThrow({
+    where: { id: guardianId, clubId },
+    include: { user: true },
+  });
+  if (guardian.user) {
+    throw new ForbiddenError("Este padre/tutor ya tiene un acceso creado");
+  }
+  const passwordHash = await hashPassword(password);
+  return prisma.user.create({
+    data: { clubId, email, passwordHash, role: "GUARDIAN", guardianId, mustChangePassword: true },
+    select: { id: true, email: true, role: true },
+  });
+}
 
 /** Resumen simplificado de un jugador para la vista "Mi Hijo" del padre/tutor (punto 29). */
 export async function getChildSummary(clubId: number, playerId: number) {

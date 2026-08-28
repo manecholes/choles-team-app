@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Download, Plus, Trash2, UploadCloud } from "lucide-react";
+import { Download, KeyRound, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Badge, statusBadge } from "@/components/Badge";
 import { Modal } from "@/components/Modal";
+import { CreateAccessModal } from "@/components/CreateAccessModal";
 import { effectiveStatus } from "@/server/logic/cartera";
 
 // Los datos llegan desde un Server Component tras un JSON.parse(JSON.stringify(...)),
@@ -292,6 +293,7 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accessGuardian, setAccessGuardian] = useState<{ id: number; firstName: string; lastName: string; email: string | null } | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -358,6 +360,25 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
                   {pg.relationship === "MADRE" ? "Madre" : pg.relationship === "PADRE" ? "Padre" : pg.relationship === "TUTOR" ? "Tutor" : "Otro"} -{" "}
                   {pg.guardian.phone ?? "sin telefono"} - {pg.guardian.email ?? "sin correo"}
                 </p>
+                {pg.guardian.user ? (
+                  <p className="mt-1 text-xs text-turqui-700">Con acceso a la app: {pg.guardian.user.email}</p>
+                ) : (
+                  canEdit && (
+                    <button
+                      className="btn-secondary mt-2"
+                      onClick={() =>
+                        setAccessGuardian({
+                          id: pg.guardian.id,
+                          firstName: pg.guardian.firstName,
+                          lastName: pg.guardian.lastName,
+                          email: pg.guardian.email,
+                        })
+                      }
+                    >
+                      <KeyRound className="h-4 w-4" /> Crear acceso
+                    </button>
+                  )
+                )}
               </div>
               {canEdit && (
                 <button className="btn-ghost text-choles-red" onClick={() => handleRemove(pg.guardian.id)}>
@@ -415,6 +436,15 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
           </button>
         </form>
       </Modal>
+
+      <CreateAccessModal
+        open={!!accessGuardian}
+        onClose={() => setAccessGuardian(null)}
+        title={`Crear acceso para ${accessGuardian?.firstName ?? ""} ${accessGuardian?.lastName ?? ""}`}
+        endpoint={accessGuardian ? `/api/guardians/${accessGuardian.id}/user` : ""}
+        defaultEmail={accessGuardian?.email ?? ""}
+        onCreated={() => router.refresh()}
+      />
     </div>
   );
 }
