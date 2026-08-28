@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+dist
+.env
+.env.local
+*.log
+storage/documents/*
+!storage/documents/.gitkeep
+storage/photos/*
+!storage/photos/.gitkeep
+storage/logos/*
+!storage/logos/.gitkeep
+.DS_Store

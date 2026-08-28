@@ -1,0 +1,913 @@
+// ============================================================================
+// CHOLES TEAM APP - Esquema de base de datos (Prisma / MySQL)
+// ============================================================================
+// Notas de diseno:
+// - Toda tabla operativa lleva club_id -> aislamiento multi-club (punto 23).
+// - Los enums de estado (Player.status, Payment.status, etc.) son la fuente
+//   de verdad para la logica de negocio; las tablas Role/Permission existen
+//   para que un super_admin pueda en el futuro configurar permisos finos
+//   desde la UI, pero la aplicacion actual valida permisos con la matriz
+//   estatica de src/lib/permissions.ts (mas rapida y sin round-trip a BD).
+// - PerformanceMetric es una tabla "serie de tiempo" generica que los
+//   servicios de evaluaciones/carga alimentan, para que el perfil de
+//   rendimiento pueda graficar evolucion sin recalcular todo en cada carga.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identidad / control de acceso
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  COACH
+  DELEGATE
+  GUARDIAN
+  PLAYER
+}
+
+model Club {
+  id            Int      @id @default(autoincrement())
+  name          String
+  slug          String   @unique
+  logoUrl       String?  @map("logo_url")
+  primaryColor  String?  @map("primary_color")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  users         User[]
+  players       Player[]
+  guardians     Guardian[]
+  coaches       Coach[]
+  delegates     Delegate[]
+  categories    Category[]
+  teams         Team[]
+  seasons       Season[]
+  calendarEvents CalendarEvent[]
+  trainingSessions TrainingSession[]
+  matches       Match[]
+  tournaments   Tournament[]
+  paymentConcepts PaymentConcept[]
+  payments      Payment[]
+  messages      Message[]
+  notifications Notification[]
+  evaluations   Evaluation[]
+  loadEntries   LoadEntry[]
+  performanceMetrics PerformanceMetric[]
+  documents     Document[]
+  settings      Setting[]
+  auditLogs     AuditLog[]
+
+  @@map("clubs")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  description String?
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int        @map("role_id")
+  permissionId Int        @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id                 Int       @id @default(autoincrement())
+  clubId             Int?      @map("club_id")
+  email              String    @unique
+  passwordHash       String    @map("password_hash")
+  role               UserRole
+  mustChangePassword Boolean   @default(true) @map("must_change_password")
+  active             Boolean   @default(true)
+  lastLoginAt        DateTime? @map("last_login_at")
+  playerId           Int?      @unique @map("player_id")
+  coachId            Int?      @unique @map("coach_id")
+  delegateId         Int?      @unique @map("delegate_id")
+  guardianId         Int?      @unique @map("guardian_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  club          Club?          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player        Player?        @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  coach         Coach?         @relation(fields: [coachId], references: [id], onDelete: SetNull)
+  delegate      Delegate?      @relation(fields: [delegateId], references: [id], onDelete: SetNull)
+  guardian      Guardian?      @relation(fields: [guardianId], references: [id], onDelete: SetNull)
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+  messageRecipients MessageRecipient[]
+  createdMessages   Message[]     @relation("MessageCreatedBy")
+  createdEvents     CalendarEvent[] @relation("EventCreatedBy")
+  registeredPayments Payment[]   @relation("PaymentRegisteredBy")
+  uploadedDocuments  Document[]  @relation("DocumentUploadedBy")
+  auditLogs     AuditLog[]
+
+  @@index([clubId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  clubId    Int?     @map("club_id")
+  userId    Int?     @map("user_id")
+  action    String
+  entity    String
+  entityId  Int?     @map("entity_id")
+  metadata  String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club Club? @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  key       String
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, key])
+  @@map("settings")
+}
+
+// ---------------------------------------------------------------------------
+// Personas
+// ---------------------------------------------------------------------------
+
+enum Sex {
+  M
+  F
+}
+
+enum PlayerStatus {
+  ACTIVE
+  INACTIVE
+  INJURED
+  SUSPENDED
+}
+
+enum GuardianRelationship {
+  MADRE
+  PADRE
+  TUTOR
+  OTRO
+}
+
+model Guardian {
+  id           Int      @id @default(autoincrement())
+  clubId       Int      @map("club_id")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  documentId   String?  @map("document_id")
+  phone        String?
+  email        String?
+  address      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  club    Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user    User?
+  players PlayerGuardian[]
+
+  @@index([clubId])
+  @@map("guardians")
+}
+
+model PlayerGuardian {
+  id                 Int                  @id @default(autoincrement())
+  playerId           Int                  @map("player_id")
+  guardianId         Int                  @map("guardian_id")
+  relationship       GuardianRelationship
+  isPrimaryContact   Boolean              @default(false) @map("is_primary_contact")
+  canViewPayments    Boolean              @default(true) @map("can_view_payments")
+  canViewEvaluations Boolean              @default(true) @map("can_view_evaluations")
+
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, guardianId])
+  @@map("player_guardians")
+}
+
+model Coach {
+  id         Int      @id @default(autoincrement())
+  clubId     Int      @map("club_id")
+  firstName  String   @map("first_name")
+  lastName   String   @map("last_name")
+  documentId String?  @map("document_id")
+  phone      String?
+  email      String?
+  specialty  String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  club       Club        @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user       User?
+  categories Category[]
+  teams      Team[]
+
+  @@index([clubId])
+  @@map("coaches")
+}
+
+model Delegate {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  phone     String?
+  email     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club  Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user  User?
+  teams Team[]
+
+  @@index([clubId])
+  @@map("delegates")
+}
+
+model Player {
+  id                    Int          @id @default(autoincrement())
+  clubId                Int          @map("club_id")
+  firstName             String       @map("first_name")
+  lastName              String       @map("last_name")
+  documentId            String?      @map("document_id")
+  birthDate             DateTime     @map("birth_date")
+  sex                   Sex
+  photoUrl              String?      @map("photo_url")
+  phone                 String?
+  address               String?
+  eps                   String?
+  emergencyContactName  String?      @map("emergency_contact_name")
+  emergencyContactPhone String?      @map("emergency_contact_phone")
+  categoryId            Int?         @map("category_id")
+  position              String?
+  heightCm              Float?       @map("height_cm")
+  weightKg              Float?       @map("weight_kg")
+  status                PlayerStatus @default(ACTIVE)
+  joinDate              DateTime     @default(now()) @map("join_date")
+  observations          String?      @db.Text
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  club            Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  category        Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user            User?
+  guardians       PlayerGuardian[]
+  teamPlayers     TeamPlayer[]
+  attendance      Attendance[]
+  matchStatistics MatchStatistic[]
+  payments        Payment[]
+  evaluations     Evaluation[]
+  loadEntries     LoadEntry[]
+  performanceMetrics PerformanceMetric[]
+  documents       Document[]
+
+  @@index([clubId])
+  @@index([categoryId])
+  @@map("players")
+}
+
+// ---------------------------------------------------------------------------
+// Estructura deportiva
+// ---------------------------------------------------------------------------
+
+enum Branch {
+  MASCULINO
+  FEMENINO
+  MIXTO
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Category {
+  id        Int            @id @default(autoincrement())
+  clubId    Int            @map("club_id")
+  name      String
+  minAge    Int            @map("min_age")
+  maxAge    Int            @map("max_age")
+  branch    Branch
+  coachId   Int?           @map("coach_id")
+  schedule  String?
+  court     String?
+  status    CategoryStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  club    Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  coach   Coach?    @relation(fields: [coachId], references: [id], onDelete: SetNull)
+  teams   Team[]
+  players Player[]
+  tournaments Tournament[]
+  messages Message[]
+
+  @@index([clubId])
+  @@map("categories")
+}
+
+model Season {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  name      String
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  active    Boolean  @default(true)
+
+  club        Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  teams       Team[]
+  teamPlayers TeamPlayer[]
+
+  @@index([clubId])
+  @@map("seasons")
+}
+
+enum TeamStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Team {
+  id         Int        @id @default(autoincrement())
+  clubId     Int        @map("club_id")
+  name       String
+  categoryId Int        @map("category_id")
+  branch     Branch
+  coachId    Int?       @map("coach_id")
+  delegateId Int?       @map("delegate_id")
+  logoUrl    String?    @map("logo_url")
+  seasonId   Int?       @map("season_id")
+  status     TeamStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  coach    Coach?   @relation(fields: [coachId], references: [id], onDelete: SetNull)
+  delegate Delegate? @relation(fields: [delegateId], references: [id], onDelete: SetNull)
+  season   Season?  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+
+  teamPlayers      TeamPlayer[]
+  trainingSessions TrainingSession[]
+  matches          Match[]
+  calendarEvents   CalendarEvent[]
+  tournamentTeams  TournamentTeam[]
+  messages         Message[]
+
+  @@index([clubId])
+  @@map("teams")
+}
+
+model TeamPlayer {
+  id           Int       @id @default(autoincrement())
+  teamId       Int       @map("team_id")
+  playerId     Int       @map("player_id")
+  seasonId     Int?      @map("season_id")
+  position     String?
+  jerseyNumber Int?      @map("jersey_number")
+  joinedAt     DateTime  @default(now()) @map("joined_at")
+  leftAt       DateTime? @map("left_at")
+
+  team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+
+  @@unique([teamId, playerId, seasonId])
+  @@map("team_players")
+}
+
+// ---------------------------------------------------------------------------
+// Calendario / actividad
+// ---------------------------------------------------------------------------
+
+enum EventType {
+  TRAINING
+  MATCH
+  TOURNAMENT
+  MEETING
+  EVALUATION
+  OTHER
+}
+
+model CalendarEvent {
+  id              Int       @id @default(autoincrement())
+  clubId          Int       @map("club_id")
+  title           String
+  type            EventType
+  startAt         DateTime  @map("start_at")
+  endAt           DateTime  @map("end_at")
+  location        String?
+  teamId          Int?      @map("team_id")
+  categoryId      Int?      @map("category_id")
+  description     String?   @db.Text
+  recurrenceRule  String?   @map("recurrence_rule")
+  trainingSessionId Int?    @unique @map("training_session_id")
+  matchId         Int?      @unique @map("match_id")
+  createdById     Int       @map("created_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  club            Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  team            Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdBy       User            @relation("EventCreatedBy", fields: [createdById], references: [id])
+  trainingSession TrainingSession? @relation(fields: [trainingSessionId], references: [id], onDelete: SetNull)
+  match           Match?          @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([clubId, startAt])
+  @@map("calendar_events")
+}
+
+model TrainingSession {
+  id              Int      @id @default(autoincrement())
+  clubId          Int      @map("club_id")
+  teamId          Int      @map("team_id")
+  coachId         Int?     @map("coach_id")
+  date            DateTime
+  startTime       String   @map("start_time")
+  endTime         String   @map("end_time")
+  location        String?
+  objective       String?
+  content         String?  @db.Text
+  durationMinutes Int      @map("duration_minutes")
+  observations    String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  club        Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  team        Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  attendance  Attendance[]
+  loadEntries LoadEntry[]
+  calendarEvent CalendarEvent?
+
+  @@index([clubId, date])
+  @@index([teamId])
+  @@map("training_sessions")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+model Attendance {
+  id                Int              @id @default(autoincrement())
+  trainingSessionId Int              @map("training_session_id")
+  playerId          Int              @map("player_id")
+  status            AttendanceStatus
+  note              String?
+  recordedAt        DateTime         @default(now()) @map("recorded_at")
+
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  player          Player          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingSessionId, playerId])
+  @@index([playerId])
+  @@map("attendance")
+}
+
+// ---------------------------------------------------------------------------
+// Partidos
+// ---------------------------------------------------------------------------
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+model Match {
+  id                  Int         @id @default(autoincrement())
+  clubId              Int         @map("club_id")
+  competition         String?
+  tournamentId        Int?        @map("tournament_id")
+  categoryId          Int?        @map("category_id")
+  teamId              Int         @map("team_id")
+  opponentName        String      @map("opponent_name")
+  date                DateTime
+  time                String
+  venue               String?
+  isHome              Boolean     @default(true) @map("is_home")
+  resultTeamScore     Int?        @map("result_team_score")
+  resultOpponentScore Int?        @map("result_opponent_score")
+  status              MatchStatus @default(SCHEDULED)
+  createdAt           DateTime    @default(now()) @map("created_at")
+
+  club       Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tournament Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  statistics MatchStatistic[]
+  calendarEvent CalendarEvent?
+  loadEntries LoadEntry[]
+
+  @@index([clubId, date])
+  @@index([teamId])
+  @@map("matches")
+}
+
+model MatchStatistic {
+  id                Int    @id @default(autoincrement())
+  matchId           Int    @map("match_id")
+  playerId          Int    @map("player_id")
+  points            Int    @default(0)
+  rebounds          Int    @default(0)
+  assists           Int    @default(0)
+  steals            Int    @default(0)
+  blocks            Int    @default(0)
+  turnovers         Int    @default(0)
+  fouls             Int    @default(0)
+  minutesPlayed     Int    @default(0) @map("minutes_played")
+  fieldGoalsMade    Int    @default(0) @map("field_goals_made")
+  fieldGoalsAtt     Int    @default(0) @map("field_goals_att")
+  threePointsMade   Int    @default(0) @map("three_points_made")
+  threePointsAtt    Int    @default(0) @map("three_points_att")
+  freeThrowsMade    Int    @default(0) @map("free_throws_made")
+  freeThrowsAtt     Int    @default(0) @map("free_throws_att")
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@map("match_statistics")
+}
+
+// ---------------------------------------------------------------------------
+// Torneos
+// ---------------------------------------------------------------------------
+
+enum TournamentStatus {
+  PLANNED
+  IN_PROGRESS
+  FINISHED
+}
+
+model Tournament {
+  id          Int               @id @default(autoincrement())
+  clubId      Int               @map("club_id")
+  name        String
+  startDate   DateTime          @map("start_date")
+  endDate     DateTime          @map("end_date")
+  status      TournamentStatus  @default(PLANNED)
+  categoryId  Int?              @map("category_id")
+  description String?           @db.Text
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  club     Club                @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  category Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  groups   TournamentGroup[]
+  teams    TournamentTeam[]
+  matches  Match[]
+
+  @@index([clubId])
+  @@map("tournaments")
+}
+
+model TournamentGroup {
+  id           Int    @id @default(autoincrement())
+  tournamentId Int    @map("tournament_id")
+  name         String
+
+  tournament Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teams      TournamentTeam[]
+
+  @@map("tournament_groups")
+}
+
+model TournamentTeam {
+  id                Int      @id @default(autoincrement())
+  tournamentId      Int      @map("tournament_id")
+  groupId           Int?     @map("group_id")
+  teamId            Int?     @map("team_id")
+  externalTeamName  String?  @map("external_team_name")
+  played            Int      @default(0)
+  wins              Int      @default(0)
+  losses            Int      @default(0)
+  pointsFor         Int      @default(0) @map("points_for")
+  pointsAgainst     Int      @default(0) @map("points_against")
+
+  tournament Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  group      TournamentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  team       Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([tournamentId])
+  @@map("tournament_teams")
+}
+
+// ---------------------------------------------------------------------------
+// Finanzas
+// ---------------------------------------------------------------------------
+
+enum PaymentConceptType {
+  MATRICULA
+  MENSUALIDAD
+  INSCRIPCION
+  UNIFORME
+  TORNEO
+  OTRO
+}
+
+model PaymentConcept {
+  id            Int                @id @default(autoincrement())
+  clubId        Int                @map("club_id")
+  name          String
+  type          PaymentConceptType
+  defaultAmount Float?             @map("default_amount")
+  active        Boolean            @default(true)
+
+  club     Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([clubId])
+  @@map("payment_concepts")
+}
+
+enum PaymentMethod {
+  EFECTIVO
+  TRANSFERENCIA
+  NEQUI
+  DAVIPLATA
+  BANCOLOMBIA
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  clubId         Int           @map("club_id")
+  playerId       Int           @map("player_id")
+  conceptId      Int           @map("concept_id")
+  amount         Float
+  paymentDate    DateTime?     @map("payment_date")
+  dueDate        DateTime?     @map("due_date")
+  periodLabel    String?       @map("period_label")
+  method         PaymentMethod?
+  status         PaymentStatus @default(PENDING)
+  registeredById Int?          @map("registered_by_id")
+  receiptNumber  String        @unique @map("receipt_number")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  club         Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player       Player          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  concept      PaymentConcept  @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  registeredBy User?           @relation("PaymentRegisteredBy", fields: [registeredById], references: [id], onDelete: SetNull)
+  receipt      Receipt?
+
+  @@index([clubId, status])
+  @@index([playerId])
+  @@map("payments")
+}
+
+model Receipt {
+  id        Int      @id @default(autoincrement())
+  paymentId Int      @unique @map("payment_id")
+  number    String   @unique
+  pdfPath   String?  @map("pdf_path")
+  issuedAt  DateTime @default(now()) @map("issued_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}
+
+// ---------------------------------------------------------------------------
+// Comunicaciones
+// ---------------------------------------------------------------------------
+
+enum AudienceType {
+  ALL
+  CATEGORY
+  TEAM
+  GUARDIANS
+  PLAYERS
+  COACHES
+}
+
+model Message {
+  id           Int          @id @default(autoincrement())
+  clubId       Int          @map("club_id")
+  title        String
+  body         String       @db.Text
+  audienceType AudienceType @map("audience_type")
+  categoryId   Int?         @map("category_id")
+  teamId       Int?         @map("team_id")
+  createdById  Int          @map("created_by_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  club       Club               @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy  User               @relation("MessageCreatedBy", fields: [createdById], references: [id])
+  category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  team       Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  recipients MessageRecipient[]
+
+  @@index([clubId])
+  @@map("messages")
+}
+
+model MessageRecipient {
+  id        Int       @id @default(autoincrement())
+  messageId Int       @map("message_id")
+  userId    Int       @map("user_id")
+  readAt    DateTime? @map("read_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("message_recipients")
+}
+
+model Notification {
+  id         Int       @id @default(autoincrement())
+  clubId     Int       @map("club_id")
+  userId     Int       @map("user_id")
+  title      String
+  body       String    @db.Text
+  type       String?
+  relatedUrl String?   @map("related_url")
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Rendimiento / evaluacion deportiva
+// ---------------------------------------------------------------------------
+
+enum PhysicalTestCategory {
+  ANTHROPOMETRY
+  SPEED
+  AGILITY
+  JUMP
+  ENDURANCE
+  STRENGTH
+}
+
+model Evaluation {
+  id          Int      @id @default(autoincrement())
+  clubId      Int      @map("club_id")
+  playerId    Int      @map("player_id")
+  date        DateTime
+  evaluatorId Int?     @map("evaluator_id")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  club   Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player Player          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  tests  PhysicalTest[]
+
+  @@index([clubId, playerId])
+  @@map("evaluations")
+}
+
+model PhysicalTest {
+  id           Int                  @id @default(autoincrement())
+  evaluationId Int                  @map("evaluation_id")
+  category     PhysicalTestCategory
+  testName     String               @map("test_name")
+  value        Float
+  unit         String
+  notes        String?
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+
+  @@index([evaluationId])
+  @@map("physical_tests")
+}
+
+model LoadEntry {
+  id                Int      @id @default(autoincrement())
+  clubId            Int      @map("club_id")
+  playerId          Int      @map("player_id")
+  trainingSessionId Int?     @map("training_session_id")
+  matchId           Int?     @map("match_id")
+  date              DateTime
+  rpe               Int
+  durationMinutes   Int      @map("duration_minutes")
+  internalLoad      Int      @map("internal_load")
+  recoveryIndex     Float?   @map("recovery_index")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  club            Club             @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player          Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  trainingSession TrainingSession? @relation(fields: [trainingSessionId], references: [id], onDelete: SetNull)
+  match           Match?           @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([clubId, playerId, date])
+  @@map("load_entries")
+}
+
+/// Serie de tiempo generica para graficos del perfil de rendimiento
+/// (peso, altura, velocidad, salto, agilidad, resistencia, rpe, carga,
+/// asistencia). Se alimenta desde los servicios de evaluaciones/carga/
+/// asistencia cada vez que hay un dato nuevo relevante para graficar.
+model PerformanceMetric {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  playerId  Int      @map("player_id")
+  metricKey String   @map("metric_key")
+  date      DateTime
+  value     Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, metricKey, date])
+  @@map("performance_metrics")
+}
+
+// ---------------------------------------------------------------------------
+// Documentos
+// ---------------------------------------------------------------------------
+
+enum DocumentType {
+  ID
+  EPS
+  AUTHORIZATION
+  CERTIFICATE
+  PHOTO
+  OTHER
+}
+
+model Document {
+  id             Int          @id @default(autoincrement())
+  clubId         Int          @map("club_id")
+  playerId       Int          @map("player_id")
+  type           DocumentType
+  fileName       String       @map("file_name")
+  filePath       String       @map("file_path")
+  mimeType       String       @map("mime_type")
+  sizeBytes      Int          @map("size_bytes")
+  uploadedById   Int?         @map("uploaded_by_id")
+  uploadedAt     DateTime     @default(now()) @map("uploaded_at")
+
+  club       Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player     Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  uploadedBy User?  @relation("DocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([playerId])
+  @@map("documents")
+}
