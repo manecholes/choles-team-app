@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       registeredByEmail: registeredBy?.email ?? null,
     });
 
-    return new NextResponse(Buffer.from(pdfBytes), {
+    return new NextResponse(new Uint8Array(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="recibo-${payment.receiptNumber}.pdf"`,
