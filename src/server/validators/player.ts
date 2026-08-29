@@ -13,6 +13,7 @@ export const playerSchema = z.object({
   emergencyContactName: z.string().max(150).optional().nullable(),
   emergencyContactPhone: z.string().max(30).optional().nullable(),
   categoryId: z.coerce.number().int().positive().optional().nullable(),
+  teamId: z.coerce.number().int().positive().optional().nullable(),
   position: z.string().max(50).optional().nullable(),
   heightCm: z.coerce.number().positive().max(260).optional().nullable(),
   weightKg: z.coerce.number().positive().max(250).optional().nullable(),
