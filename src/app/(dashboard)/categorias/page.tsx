@@ -132,7 +132,7 @@ export default function CategoriasPage() {
 
   const columns: Column<Category>[] = [
     { key: "name", header: "Categoria", render: (c) => <span className="font-medium">{c.name}</span>, searchValue: (c) => c.name },
-    { key: "age", header: "Edad", render: (c) => `${c.minAge} - ${c.maxAge} anos` },
+      { key: "age", header: "Edad", render: (c) => `${c.minAge} - ${c.maxAge} años` },
     { key: "branch", header: "Rama", render: (c) => BRANCH_LABEL[c.branch] },
     { key: "coach", header: "Entrenador", render: (c) => (c.coach ? `${c.coach.firstName} ${c.coach.lastName}` : "-") },
     { key: "schedule", header: "Horario", render: (c) => c.schedule ?? "-" },
