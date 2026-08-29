@@ -24,3 +24,12 @@ export const teamSchema = z.object({
   seasonId: z.coerce.number().int().positive().optional().nullable(),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 });
+
+// Vincula (o edita el numero/posicion de) un jugador existente a un equipo,
+// desde la pantalla de detalle del equipo (punto 7 del maestro: la
+// plantilla debe poder gestionarse, no solo mostrarse).
+export const teamPlayerSchema = z.object({
+  playerId: z.coerce.number().int().positive(),
+  jerseyNumber: z.coerce.number().int().min(0).max(99).optional().nullable(),
+  position: z.string().max(50).optional().nullable(),
+});
