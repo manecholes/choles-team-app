@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
+import { SessionRefresher } from "@/components/SessionRefresher";
 
 export default async function DashboardLayout({
   children,
@@ -20,6 +21,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
+      <SessionRefresher />
       <Sidebar role={user.role} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar email={user.email} role={user.role} clubName={club?.name} />
