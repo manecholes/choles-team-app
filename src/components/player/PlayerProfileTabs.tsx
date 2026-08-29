@@ -76,7 +76,7 @@ export function PlayerProfileTabs({
             {player.firstName} {player.lastName}
           </h1>
           <p className="text-sm text-slate-500">
-            {profile.age} anos - {player.category?.name ?? "Sin categoria"}
+                       {profile.age} años - {player.category?.name ?? "Sin categoría"}
             {profile.currentTeam ? ` - ${profile.currentTeam.name}` : ""}
           </p>
         </div>
