@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Ban, KeyRound, RotateCcw } from "lucide-react";
+import { Plus, Pencil, Trash2, KeyRound, RotateCcw } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge } from "@/components/Badge";
@@ -88,9 +88,19 @@ export default function EntrenadoresPage() {
     }
   }
 
-  async function handleDeactivate(c: Coach) {
-    if (!confirm(`¿Marcar a ${c.firstName} ${c.lastName} como inactivo?`)) return;
-    await fetch(`/api/coaches/${c.id}`, { method: "DELETE" });
+  async function handleDelete(c: Coach) {
+    if (
+      !confirm(
+        `¿Eliminar definitivamente a ${c.firstName} ${c.lastName}? Esta accion no se puede deshacer y tambien elimina su acceso a la app si lo tiene.`
+      )
+    )
+      return;
+    const res = await fetch(`/api/coaches/${c.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "No se pudo eliminar el entrenador");
+      return;
+    }
     await loadData();
   }
 
@@ -139,11 +149,9 @@ export default function EntrenadoresPage() {
           <button className="btn-ghost" onClick={() => openEdit(c)}>
             <Pencil className="h-4 w-4" />
           </button>
-          {c.active && (
-            <button className="btn-ghost text-choles-red" onClick={() => handleDeactivate(c)}>
-              <Ban className="h-4 w-4" />
-            </button>
-          )}
+          <button className="btn-ghost text-choles-red" title="Eliminar" onClick={() => handleDelete(c)}>
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       ),
     },
