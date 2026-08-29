@@ -1,9 +1,10 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { z } from "zod";
-import type { teamSchema } from "@/server/validators/team";
+import type { teamSchema, teamPlayerSchema } from "@/server/validators/team";
 
 type TeamInput = z.infer<typeof teamSchema>;
+type TeamPlayerInput = z.infer<typeof teamPlayerSchema>;
 
 export async function listTeams(clubId: number, filters: { categoryId?: number; coachId?: number } = {}) {
   const where: any = { clubId };
@@ -106,4 +107,41 @@ export async function getTeamDetail(clubId: number, teamId: number) {
   ]);
 
   return { team, roster, upcomingMatches, pastMatches, upcomingTrainings, recentAttendance };
+}
+
+/**
+ * Vincula un jugador existente a este equipo (punto 7: gestionar la
+ * plantilla desde la pantalla del equipo). Un jugador solo puede tener una
+ * membresia activa (leftAt null) a la vez: si ya estaba en otro equipo, esa
+ * membresia se cierra automaticamente antes de crear la nueva.
+ */
+export async function addPlayerToTeam(clubId: number, teamId: number, data: TeamPlayerInput) {
+  await prisma.team.findFirstOrThrow({ where: { id: teamId, clubId } });
+  const player = await prisma.player.findFirstOrThrow({ where: { id: data.playerId, clubId } });
+
+  return prisma.$transaction(async (tx) => {
+    const currentActive = await tx.teamPlayer.findFirst({ where: { playerId: player.id, leftAt: null } });
+    if (currentActive) {
+      if (currentActive.teamId === teamId) {
+        throw new Error("Este jugador ya esta en este equipo");
+      }
+      await tx.teamPlayer.update({ where: { id: currentActive.id }, data: { leftAt: new Date() } });
+    }
+    return tx.teamPlayer.create({
+      data: {
+        teamId,
+        playerId: player.id,
+        jerseyNumber: data.jerseyNumber ?? null,
+        position: data.position || null,
+      },
+      include: { player: true },
+    });
+  });
+}
+
+/** Quita a un jugador de la plantilla del equipo (cierra su membresia, no borra historial). */
+export async function removePlayerFromTeam(clubId: number, teamId: number, teamPlayerId: number) {
+  await prisma.team.findFirstOrThrow({ where: { id: teamId, clubId } });
+  await prisma.teamPlayer.findFirstOrThrow({ where: { id: teamPlayerId, teamId, leftAt: null } });
+  await prisma.teamPlayer.update({ where: { id: teamPlayerId }, data: { leftAt: new Date() } });
 }
