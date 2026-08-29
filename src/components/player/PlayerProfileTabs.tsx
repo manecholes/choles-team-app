@@ -121,6 +121,7 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [teams, setTeams] = useState<{ id: number; name: string; category: { id: number; name: string } | null }[]>([]);
   const [form, setForm] = useState({
     firstName: player.firstName,
     lastName: player.lastName,
@@ -133,6 +134,7 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
     emergencyContactName: player.emergencyContactName ?? "",
     emergencyContactPhone: player.emergencyContactPhone ?? "",
     categoryId: (player.categoryId ?? "") as number | string,
+    teamId: (profile.currentTeam?.id ?? "") as number | string,
     position: player.position ?? "",
     heightCm: player.heightCm ?? "",
     weightKg: player.weightKg ?? "",
@@ -144,6 +146,9 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
     fetch("/api/categories")
       .then((res) => res.json())
       .then((data) => setCategories(data.categories ?? []));
+    fetch("/api/teams")
+      .then((res) => res.json())
+      .then((data) => setTeams(data.teams ?? []));
   }, [editing]);
 
   async function handleSave(e: FormEvent) {
@@ -157,6 +162,7 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
         body: JSON.stringify({
           ...form,
           categoryId: form.categoryId || null,
+          teamId: form.teamId || null,
           heightCm: form.heightCm || null,
           weightKg: form.weightKg || null,
         }),
@@ -232,6 +238,23 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
               ))}
             </select>
           </Field>
+          <Field label="Equipo">
+            <select
+              className="input"
+              value={form.teamId}
+              onChange={(e) => setForm({ ...form, teamId: e.target.value ? Number(e.target.value) : "" })}
+            >
+              <option value="">Sin asignar</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                  {t.category ? ` (${t.category.name})` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Posicion">
             <input className="input" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
           </Field>
@@ -284,6 +307,7 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
         <Info label="Contacto de emergencia" value={player.emergencyContactName} />
         <Info label="Telefono de emergencia" value={player.emergencyContactPhone} />
         <Info label="Categoria" value={player.category?.name} />
+        <Info label="Equipo" value={profile.currentTeam?.name} />
         <Info label="Posicion" value={player.position} />
         <Info label="Altura" value={player.heightCm ? `${player.heightCm} cm` : null} />
         <Info label="Peso" value={player.weightKg ? `${player.weightKg} kg` : null} />
