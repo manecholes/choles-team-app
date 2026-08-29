@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getTeamDetail } from "@/server/services/team.service";
 import { attendancePercentage } from "@/server/logic/attendance";
-import { Badge, statusBadge } from "@/components/Badge";
+import { TeamRoster } from "@/components/team/TeamRoster";
 
 export default async function TeamDetailPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -49,47 +49,7 @@ export default async function TeamDetailPage({ params }: { params: { id: string 
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="card lg:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Plantilla ({roster.length})</h2>
-          <div className="thin-scrollbar overflow-x-auto">
-            <table className="table-base">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Jugador</th>
-                  <th>Posicion</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roster.map((tp) => {
-                  const b = statusBadge("player", tp.player.status);
-                  return (
-                    <tr key={tp.id}>
-                      <td>{tp.jerseyNumber ?? "-"}</td>
-                      <td>
-                        <Link href={`/jugadores/${tp.player.id}`} className="font-medium text-turqui-700 hover:underline">
-                          {tp.player.firstName} {tp.player.lastName}
-                        </Link>
-                      </td>
-                      <td>{tp.position ?? tp.player.position ?? "-"}</td>
-                      <td>
-                        <Badge tone={b.tone}>{b.label}</Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {roster.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-400">
-                      Sin jugadores asignados a este equipo.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <TeamRoster teamId={team.id} initialRoster={roster} />
 
         <div className="space-y-6">
           <div className="card">
