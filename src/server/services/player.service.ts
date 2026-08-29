@@ -38,54 +38,92 @@ export async function listPlayers(
 }
 
 export async function createPlayer(clubId: number, data: PlayerInput) {
-  return prisma.player.create({
-    data: {
-      clubId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      documentId: data.documentId || null,
-      birthDate: data.birthDate,
-      sex: data.sex,
-      photoUrl: data.photoUrl || null,
-      phone: data.phone || null,
-      address: data.address || null,
-      eps: data.eps || null,
-      emergencyContactName: data.emergencyContactName || null,
-      emergencyContactPhone: data.emergencyContactPhone || null,
-      categoryId: data.categoryId || null,
-      position: data.position || null,
-      heightCm: data.heightCm || null,
-      weightKg: data.weightKg || null,
-      status: data.status,
-      joinDate: data.joinDate ?? new Date(),
-      observations: data.observations || null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const player = await tx.player.create({
+      data: {
+        clubId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        documentId: data.documentId || null,
+        birthDate: data.birthDate,
+        sex: data.sex,
+        photoUrl: data.photoUrl || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        eps: data.eps || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null,
+        categoryId: data.categoryId || null,
+        position: data.position || null,
+        heightCm: data.heightCm || null,
+        weightKg: data.weightKg || null,
+        status: data.status,
+        joinDate: data.joinDate ?? new Date(),
+        observations: data.observations || null,
+      },
+    });
+
+    // Si se eligio un equipo al crear el jugador, lo vinculamos de una vez
+    // (ver punto 5/7 del maestro: el jugador debe quedar ubicado en su equipo).
+    if (data.teamId) {
+      await tx.team.findFirstOrThrow({ where: { id: data.teamId, clubId } });
+      await tx.teamPlayer.create({
+        data: { teamId: data.teamId, playerId: player.id, position: data.position || null },
+      });
+    }
+
+    return player;
   });
 }
 
 export async function updatePlayer(clubId: number, playerId: number, data: PlayerInput) {
-  await prisma.player.findFirstOrThrow({ where: { id: playerId, clubId } });
-  return prisma.player.update({
-    where: { id: playerId },
-    data: {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      documentId: data.documentId || null,
-      birthDate: data.birthDate,
-      sex: data.sex,
-      photoUrl: data.photoUrl || null,
-      phone: data.phone || null,
-      address: data.address || null,
-      eps: data.eps || null,
-      emergencyContactName: data.emergencyContactName || null,
-      emergencyContactPhone: data.emergencyContactPhone || null,
-      categoryId: data.categoryId || null,
-      position: data.position || null,
-      heightCm: data.heightCm || null,
-      weightKg: data.weightKg || null,
-      status: data.status,
-      observations: data.observations || null,
-    },
+  const existing = await prisma.player.findFirstOrThrow({
+    where: { id: playerId, clubId },
+    include: { teamPlayers: { where: { leftAt: null } } },
+  });
+
+  return prisma.$transaction(async (tx) => {
+    const player = await tx.player.update({
+      where: { id: playerId },
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        documentId: data.documentId || null,
+        birthDate: data.birthDate,
+        sex: data.sex,
+        photoUrl: data.photoUrl || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        eps: data.eps || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null,
+        categoryId: data.categoryId || null,
+        position: data.position || null,
+        heightCm: data.heightCm || null,
+        weightKg: data.weightKg || null,
+        status: data.status,
+        observations: data.observations || null,
+      },
+    });
+
+    // Mantiene el vinculo con el equipo sincronizado con lo elegido en el formulario:
+    // si cambio de equipo (o se quito), cerramos la membresia activa anterior; si
+    // eligio uno nuevo, se crea la nueva membresia.
+    const currentTeamPlayer = existing.teamPlayers[0] ?? null;
+    const newTeamId = data.teamId || null;
+    if ((currentTeamPlayer?.teamId ?? null) !== newTeamId) {
+      if (currentTeamPlayer) {
+        await tx.teamPlayer.update({ where: { id: currentTeamPlayer.id }, data: { leftAt: new Date() } });
+      }
+      if (newTeamId) {
+        await tx.team.findFirstOrThrow({ where: { id: newTeamId, clubId } });
+        await tx.teamPlayer.create({
+          data: { teamId: newTeamId, playerId, position: data.position || null },
+        });
+      }
+    }
+
+    return player;
   });
 }
 
