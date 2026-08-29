@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Ban, KeyRound } from "lucide-react";
+import { Plus, Pencil, Ban, KeyRound, RotateCcw } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge } from "@/components/Badge";
 import { CreateAccessModal } from "@/components/CreateAccessModal";
+import { ResetPasswordModal } from "@/components/ResetPasswordModal";
 
 interface Delegate {
   id: number;
@@ -29,6 +30,7 @@ export default function DelegadosPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [accessTarget, setAccessTarget] = useState<Delegate | null>(null);
+  const [resetTarget, setResetTarget] = useState<Delegate | null>(null);
 
   async function loadData() {
     setLoading(true);
@@ -114,7 +116,12 @@ export default function DelegadosPage() {
       header: "Acceso a la app",
       render: (d) =>
         d.user ? (
-          <span className="text-sm text-slate-500">{d.user.email}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">{d.user.email}</span>
+            <button className="btn-ghost" title="Restablecer contrasena" onClick={() => setResetTarget(d)}>
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          </div>
         ) : (
           <button className="btn-secondary" onClick={() => setAccessTarget(d)}>
             <KeyRound className="h-4 w-4" /> Crear acceso
@@ -197,6 +204,14 @@ export default function DelegadosPage() {
         endpoint={accessTarget ? `/api/delegates/${accessTarget.id}/user` : ""}
         defaultEmail={accessTarget?.email ?? ""}
         onCreated={loadData}
+      />
+
+      <ResetPasswordModal
+        open={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        title={`Restablecer contrasena de ${resetTarget?.firstName ?? ""} ${resetTarget?.lastName ?? ""}`}
+        endpoint={resetTarget ? `/api/delegates/${resetTarget.id}/user` : ""}
+        onDone={loadData}
       />
     </div>
   );

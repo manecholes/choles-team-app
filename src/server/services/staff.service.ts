@@ -40,6 +40,27 @@ export async function createCoachUserAccess(clubId: number, coachId: number, ema
   });
 }
 
+/**
+ * Restablece la contrasena de un entrenador que YA tiene acceso creado
+ * (por ejemplo, si la olvido). Vuelve a marcar mustChangePassword para que
+ * tenga que definir una nueva la proxima vez que inicie sesion.
+ */
+export async function resetCoachPassword(clubId: number, coachId: number, password: string) {
+  const coach = await prisma.coach.findFirstOrThrow({
+    where: { id: coachId, clubId },
+    include: { user: true },
+  });
+  if (!coach.user) {
+    throw new ForbiddenError("Este entrenador todavia no tiene un acceso creado");
+  }
+  const passwordHash = await hashPassword(password);
+  return prisma.user.update({
+    where: { id: coach.user.id },
+    data: { passwordHash, mustChangePassword: true },
+    select: { id: true, email: true, role: true },
+  });
+}
+
 export async function createCoach(clubId: number, data: CoachInput) {
   return prisma.coach.create({
     data: {
@@ -84,6 +105,23 @@ export async function listDelegates(clubId: number) {
       user: { select: { id: true, email: true } },
     },
     orderBy: { lastName: "asc" },
+  });
+}
+
+/** Restablece la contrasena de un delegado que YA tiene acceso creado. */
+export async function resetDelegatePassword(clubId: number, delegateId: number, password: string) {
+  const delegate = await prisma.delegate.findFirstOrThrow({
+    where: { id: delegateId, clubId },
+    include: { user: true },
+  });
+  if (!delegate.user) {
+    throw new ForbiddenError("Este delegado todavia no tiene un acceso creado");
+  }
+  const passwordHash = await hashPassword(password);
+  return prisma.user.update({
+    where: { id: delegate.user.id },
+    data: { passwordHash, mustChangePassword: true },
+    select: { id: true, email: true, role: true },
   });
 }
 

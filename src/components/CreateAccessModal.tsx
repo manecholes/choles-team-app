@@ -9,7 +9,7 @@ import { Modal } from "@/components/Modal";
  * backend: 8+ caracteres, mayuscula y numero) para que el administrador
  * no tenga que inventarla el mismo.
  */
-function randomPassword() {
+export function randomPassword() {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   const lower = "abcdefghijkmnpqrstuvwxyz";
   const digits = "23456789";

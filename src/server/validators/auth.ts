@@ -20,6 +20,21 @@ export const createAccessSchema = z.object({
     .regex(/[0-9]/, "Debe incluir al menos un numero"),
 });
 
+/**
+ * Usado por el administrador para restablecer la contrasena de un
+ * entrenador, delegado o padre/tutor que YA tiene acceso creado (por
+ * ejemplo, porque la olvido). No pide la contrasena actual: quien la usa
+ * ya paso por el control de permisos de "coaches:write" / "delegates:write"
+ * / "guardians:write" en la ruta correspondiente.
+ */
+export const resetPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, "Minimo 8 caracteres")
+    .regex(/[A-Z]/, "Debe incluir al menos una mayuscula")
+    .regex(/[0-9]/, "Debe incluir al menos un numero"),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),

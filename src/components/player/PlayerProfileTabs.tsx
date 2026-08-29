@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Download, KeyRound, Plus, Trash2, UploadCloud } from "lucide-react";
+import { Download, KeyRound, Plus, RotateCcw, Trash2, UploadCloud } from "lucide-react";
 import { Badge, statusBadge } from "@/components/Badge";
 import { Modal } from "@/components/Modal";
 import { CreateAccessModal } from "@/components/CreateAccessModal";
+import { ResetPasswordModal } from "@/components/ResetPasswordModal";
 import { effectiveStatus } from "@/server/logic/cartera";
 
 // Los datos llegan desde un Server Component tras un JSON.parse(JSON.stringify(...)),
@@ -319,6 +320,7 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessGuardian, setAccessGuardian] = useState<{ id: number; firstName: string; lastName: string; email: string | null } | null>(null);
+  const [resetGuardian, setResetGuardian] = useState<{ id: number; firstName: string; lastName: string } | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -386,7 +388,20 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
                   {pg.guardian.phone ?? "sin telefono"} - {pg.guardian.email ?? "sin correo"}
                 </p>
                 {pg.guardian.user ? (
-                  <p className="mt-1 text-xs text-turqui-700">Con acceso a la app: {pg.guardian.user.email}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-xs text-turqui-700">Con acceso a la app: {pg.guardian.user.email}</p>
+                    {canEdit && (
+                      <button
+                        className="btn-ghost"
+                        title="Restablecer contrasena"
+                        onClick={() =>
+                          setResetGuardian({ id: pg.guardian.id, firstName: pg.guardian.firstName, lastName: pg.guardian.lastName })
+                        }
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   canEdit && (
                     <button
@@ -469,6 +484,14 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
         endpoint={accessGuardian ? `/api/guardians/${accessGuardian.id}/user` : ""}
         defaultEmail={accessGuardian?.email ?? ""}
         onCreated={() => router.refresh()}
+      />
+
+      <ResetPasswordModal
+        open={!!resetGuardian}
+        onClose={() => setResetGuardian(null)}
+        title={`Restablecer contrasena de ${resetGuardian?.firstName ?? ""} ${resetGuardian?.lastName ?? ""}`}
+        endpoint={resetGuardian ? `/api/guardians/${resetGuardian.id}/user` : ""}
+        onDone={() => router.refresh()}
       />
     </div>
   );

@@ -25,6 +25,23 @@ export async function createGuardianUserAccess(clubId: number, guardianId: numbe
   });
 }
 
+/** Restablece la contrasena de un padre/tutor que YA tiene acceso creado. */
+export async function resetGuardianPassword(clubId: number, guardianId: number, password: string) {
+  const guardian = await prisma.guardian.findFirstOrThrow({
+    where: { id: guardianId, clubId },
+    include: { user: true },
+  });
+  if (!guardian.user) {
+    throw new ForbiddenError("Este padre/tutor todavia no tiene un acceso creado");
+  }
+  const passwordHash = await hashPassword(password);
+  return prisma.user.update({
+    where: { id: guardian.user.id },
+    data: { passwordHash, mustChangePassword: true },
+    select: { id: true, email: true, role: true },
+  });
+}
+
 /** Resumen simplificado de un jugador para la vista "Mi Hijo" del padre/tutor (punto 29). */
 export async function getChildSummary(clubId: number, playerId: number) {
   const now = new Date();
