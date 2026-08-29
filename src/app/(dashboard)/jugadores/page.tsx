@@ -12,6 +12,12 @@ interface Category {
   name: string;
 }
 
+interface Team {
+  id: number;
+  name: string;
+  category: { id: number; name: string } | null;
+}
+
 interface Player {
   id: number;
   firstName: string;
@@ -35,6 +41,7 @@ const emptyForm = {
   emergencyContactName: "",
   emergencyContactPhone: "",
   categoryId: "" as string | number,
+  teamId: "" as string | number,
   position: "",
   heightCm: "",
   weightKg: "",
@@ -45,6 +52,7 @@ const emptyForm = {
 export default function JugadoresPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -53,9 +61,14 @@ export default function JugadoresPage() {
 
   async function loadData() {
     setLoading(true);
-    const [playersRes, catsRes] = await Promise.all([fetch("/api/players"), fetch("/api/categories")]);
+    const [playersRes, catsRes, teamsRes] = await Promise.all([
+      fetch("/api/players"),
+      fetch("/api/categories"),
+      fetch("/api/teams"),
+    ]);
     setPlayers((await playersRes.json()).players ?? []);
     setCategories((await catsRes.json()).categories ?? []);
+    setTeams((await teamsRes.json()).teams ?? []);
     setLoading(false);
   }
 
@@ -77,6 +90,7 @@ export default function JugadoresPage() {
       const payload = {
         ...form,
         categoryId: form.categoryId || null,
+        teamId: form.teamId || null,
         heightCm: form.heightCm || null,
         weightKg: form.weightKg || null,
       };
@@ -222,7 +236,7 @@ export default function JugadoresPage() {
               <input className="input" value={form.emergencyContactPhone} onChange={(e) => setForm({ ...form, emergencyContactPhone: e.target.value })} />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Categoria</label>
               <select className="input" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
@@ -234,6 +248,20 @@ export default function JugadoresPage() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="label">Equipo</label>
+              <select className="input" value={form.teamId} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
+                <option value="">Sin asignar</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.category ? ` (${t.category.name})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Posicion</label>
               <input className="input" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Base, Alero..." />
