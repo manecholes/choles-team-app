@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Download, KeyRound, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Badge, statusBadge } from "@/components/Badge";
 import { Modal } from "@/components/Modal";
@@ -119,6 +119,7 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState({
     firstName: player.firstName,
     lastName: player.lastName,
@@ -130,11 +131,19 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
     eps: player.eps ?? "",
     emergencyContactName: player.emergencyContactName ?? "",
     emergencyContactPhone: player.emergencyContactPhone ?? "",
+    categoryId: (player.categoryId ?? "") as number | string,
     position: player.position ?? "",
     heightCm: player.heightCm ?? "",
     weightKg: player.weightKg ?? "",
     status: player.status,
   });
+
+  useEffect(() => {
+    if (!editing) return;
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => setCategories(data.categories ?? []));
+  }, [editing]);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -146,7 +155,7 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          categoryId: player.categoryId,
+          categoryId: form.categoryId || null,
           heightCm: form.heightCm || null,
           weightKg: form.weightKg || null,
         }),
@@ -207,10 +216,26 @@ function InfoTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit: bo
             <input className="input" value={form.emergencyContactPhone} onChange={(e) => setForm({ ...form, emergencyContactPhone: e.target.value })} />
           </Field>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Categoria">
+            <select
+              className="input"
+              value={form.categoryId}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value ? Number(e.target.value) : "" })}
+            >
+              <option value="">Sin asignar</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Posicion">
             <input className="input" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
           </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Altura (cm)">
             <input type="number" step="0.1" className="input" value={form.heightCm} onChange={(e) => setForm({ ...form, heightCm: e.target.value })} />
           </Field>
