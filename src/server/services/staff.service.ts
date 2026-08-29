@@ -92,9 +92,19 @@ export async function updateCoach(clubId: number, id: number, data: CoachInput) 
   });
 }
 
+/**
+ * Elimina definitivamente a un entrenador. Si tenia un acceso (usuario)
+ * creado, tambien se elimina para no dejar una cuenta huerfana con un
+ * correo que ya no se podria volver a usar en un nuevo acceso.
+ */
 export async function deleteCoach(clubId: number, id: number) {
-  await prisma.coach.findFirstOrThrow({ where: { id, clubId } });
-  await prisma.coach.update({ where: { id }, data: { active: false } });
+  const coach = await prisma.coach.findFirstOrThrow({ where: { id, clubId }, include: { user: true } });
+  await prisma.$transaction(async (tx) => {
+    if (coach.user) {
+      await tx.user.delete({ where: { id: coach.user.id } });
+    }
+    await tx.coach.delete({ where: { id } });
+  });
 }
 
 export async function listDelegates(clubId: number) {
