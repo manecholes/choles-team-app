@@ -358,15 +358,21 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
     canViewEvaluations: true,
   });
 
-  async function handleAdd(e: FormEvent) {
+  async function handleAdd(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
+      const fd = new FormData(e.currentTarget);
+      const relationshipFromDom = fd.get("relationship");
+      const payload = {
+        ...form,
+        relationship: (typeof relationshipFromDom === "string" && relationshipFromDom) || form.relationship || "MADRE",
+      };
       const res = await fetch(`/api/players/${profile.player.id}/guardians`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -473,7 +479,7 @@ function FamiliaTab({ profile, canEdit }: { profile: PlayerProfileData; canEdit:
             </Field>
           </div>
           <Field label="Parentesco">
-            <select className="input" value={form.relationship} onChange={(e) => setForm({ ...form, relationship: e.target.value })}>
+            <select name="relationship" className="input" value={form.relationship} onChange={(e) => setForm({ ...form, relationship: e.target.value })}>
               <option value="MADRE">Madre</option>
               <option value="PADRE">Padre</option>
               <option value="TUTOR">Tutor</option>
