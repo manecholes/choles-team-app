@@ -2,10 +2,15 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Plus, ListChecks, Trash2 } from "lucide-react";
+import { Plus, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
+
+/** Convierte una fecha (ISO o Date) al formato yyyy-MM-dd que espera <input type="date">. */
+function toDateInputValue(value: string) {
+  return value.slice(0, 10);
+}
 
 interface MatchRow {
   id: number;
@@ -38,6 +43,7 @@ export default function PartidosPage() {
   const [teams, setTeams] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<MatchRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -55,7 +61,24 @@ export default function PartidosPage() {
   }, []);
 
   function openCreate() {
+    setEditing(null);
     setForm(emptyForm);
+    setError(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(m: MatchRow) {
+    setEditing(m);
+    setForm({
+      competition: m.competition ?? "",
+      teamId: m.team.id,
+      opponentName: m.opponentName,
+      date: toDateInputValue(m.date),
+      time: m.time,
+      venue: m.venue ?? "",
+      isHome: m.isHome,
+      status: m.status,
+    });
     setError(null);
     setModalOpen(true);
   }
@@ -65,14 +88,14 @@ export default function PartidosPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/matches", {
-        method: "POST",
+      const res = await fetch(editing ? `/api/matches/${editing.id}` : "/api/matches", {
+        method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "No se pudo crear el partido");
+        setError(data.error ?? "No se pudo guardar el partido");
         return;
       }
       setModalOpen(false);
@@ -128,6 +151,9 @@ export default function PartidosPage() {
           <Link href={`/partidos/${m.id}`} className="btn-primary">
             <ListChecks className="h-4 w-4" /> Estadisticas
           </Link>
+          <button className="btn-ghost" onClick={() => openEdit(m)} title="Editar partido">
+            <Pencil className="h-4 w-4" />
+          </button>
           <button className="btn-ghost text-choles-red" onClick={() => handleDelete(m)}>
             <Trash2 className="h-4 w-4" />
           </button>
@@ -158,7 +184,7 @@ export default function PartidosPage() {
         />
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nuevo partido">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Editar partido" : "Nuevo partido"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Equipo</label>
