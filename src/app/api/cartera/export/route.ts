@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { assertPermission, handleApiError, resolveClubScope } from "@/lib/api-utils";
 import { getCartera } from "@/server/services/payment.service";
 import { buildExcelBuffer } from "@/lib/excel";
+import { formatDateCO } from "@/lib/date-format";
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       ],
       rows.map((r) => ({
         ...r,
-        lastPayment: r.lastPayment ? new Date(r.lastPayment).toLocaleDateString("es-CO") : "-",
+        lastPayment: r.lastPayment ? formatDateCO(r.lastPayment) : "-",
         status: r.status === "OVERDUE" ? "Vencido" : "Pendiente",
       }))
     );
