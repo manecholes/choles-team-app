@@ -5,6 +5,7 @@ import { Plus, Download, CheckCircle2, Trash2, Settings } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
+import { formatDateCO } from "@/lib/date-format";
 
 interface Concept {
   id: number;
@@ -158,7 +159,7 @@ export default function PagosPage() {
     { key: "period", header: "Periodo", render: (p) => p.periodLabel ?? "-" },
     { key: "amount", header: "Valor", render: (p) => fmtMoney(p.amount) },
     { key: "method", header: "Metodo", render: (p) => p.method ?? "-" },
-    { key: "due", header: "Vencimiento", render: (p) => (p.dueDate ? new Date(p.dueDate).toLocaleDateString("es-CO") : "-") },
+    { key: "due", header: "Vencimiento", render: (p) => (p.dueDate ? formatDateCO(p.dueDate) : "-") },
     {
       key: "status",
       header: "Estado",
