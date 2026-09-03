@@ -5,6 +5,7 @@ import { Download, AlertTriangle, Users, Wallet } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Badge, statusBadge } from "@/components/Badge";
 import { StatCard } from "@/components/StatCard";
+import { formatDateCO } from "@/lib/date-format";
 
 interface CarteraRow {
   playerId: number;
@@ -83,7 +84,7 @@ export default function CarteraPage() {
     { key: "team", header: "Equipo", render: (r) => r.team },
     { key: "debt", header: "Valor adeudado", render: (r) => fmtMoney(r.debt) },
     { key: "months", header: "Meses pendientes", render: (r) => r.monthsPending },
-    { key: "last", header: "Ultimo pago", render: (r) => (r.lastPayment ? new Date(r.lastPayment).toLocaleDateString("es-CO") : "Nunca") },
+    { key: "last", header: "Ultimo pago", render: (r) => (r.lastPayment ? formatDateCO(r.lastPayment) : "Nunca") },
     { key: "mora", header: "Dias de mora", render: (r) => (r.maxDaysOverdue > 0 ? r.maxDaysOverdue : "-") },
     {
       key: "status",
