@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const physicalTestSchema = z.object({
-  category: z.enum(["ANTHROPOMETRY", "SPEED", "AGILITY", "JUMP", "ENDURANCE", "STRENGTH"]),
+  category: z.enum(["ANTHROPOMETRY", "SPEED", "AGILITY", "JUMP", "ENDURANCE", "STRENGTH", "TECHNICAL", "ATTITUDE"]),
   testName: z.string().min(1).max(60),
   value: z.coerce.number(),
   unit: z.string().min(1).max(20),
