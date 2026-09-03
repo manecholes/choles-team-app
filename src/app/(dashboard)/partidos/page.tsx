@@ -6,6 +6,7 @@ import { Plus, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
+import { formatDateCO } from "@/lib/date-format";
 
 /** Convierte una fecha (ISO o Date) al formato yyyy-MM-dd que espera <input type="date">. */
 function toDateInputValue(value: string) {
@@ -122,7 +123,7 @@ export default function PartidosPage() {
       header: "Fecha",
       render: (m) => (
         <div>
-          <p className="font-medium">{new Date(m.date).toLocaleDateString("es-CO")}</p>
+          <p className="font-medium">{formatDateCO(m.date)}</p>
           <p className="text-xs text-slate-400">{m.time}</p>
         </div>
       ),
