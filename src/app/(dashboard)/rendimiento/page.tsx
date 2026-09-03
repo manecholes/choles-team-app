@@ -22,6 +22,8 @@ interface TestRow {
   testName: string;
   value: string;
   unit: string;
+  /** Solo para TECHNICAL: aciertos de 10 lanzamientos/repeticiones, antes de convertir a puntaje 1-5. */
+  makes?: string;
 }
 
 const TEST_CATALOG: Record<string, Array<{ testName: string; unit: string }>> = {
@@ -49,6 +51,21 @@ const TEST_CATALOG: Record<string, Array<{ testName: string; unit: string }>> = 
     { testName: "30-15 VIFT", unit: "km/h" },
   ],
   STRENGTH: [{ testName: "Prueba de fuerza", unit: "kg" }],
+  TECHNICAL: [
+    { testName: "Bandeja derecha", unit: "pts (1-5)" },
+    { testName: "Bandeja izquierda", unit: "pts (1-5)" },
+    { testName: "Tiro de media distancia", unit: "pts (1-5)" },
+    { testName: "Tiro libre", unit: "pts (1-5)" },
+    { testName: "Tiro de tres puntos", unit: "pts (1-5)" },
+    { testName: "Manejo de balon (ambas manos)", unit: "pts (1-5)" },
+  ],
+  ATTITUDE: [
+    { testName: "Es entrenable", unit: "pts (1-5)" },
+    { testName: "Puntualidad y asistencia", unit: "pts (1-5)" },
+    { testName: "Toma buenas decisiones en cancha", unit: "pts (1-5)" },
+    { testName: "Actitud y esfuerzo en entrenamientos", unit: "pts (1-5)" },
+    { testName: "Trabajo en equipo y comunicacion", unit: "pts (1-5)" },
+  ],
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -58,7 +75,28 @@ const CATEGORY_LABEL: Record<string, string> = {
   JUMP: "Salto",
   ENDURANCE: "Resistencia",
   STRENGTH: "Fuerza",
+  TECHNICAL: "Test tecnico",
+  ATTITUDE: "Test de actitud",
 };
+
+/** Pruebas tecnicas que se evaluan con 10 lanzamientos/repeticiones y se convierten a un puntaje de 1 a 5. */
+const SHOT_BASED_TESTS = new Set([
+  "Bandeja derecha",
+  "Bandeja izquierda",
+  "Tiro de media distancia",
+  "Tiro libre",
+  "Tiro de tres puntos",
+  "Manejo de balon (ambas manos)",
+]);
+
+/** Convierte aciertos de 10 lanzamientos/repeticiones a un puntaje de 1 a 5. */
+function scoreFromMakes(makes: number): number {
+  if (makes <= 2) return 1;
+  if (makes <= 4) return 2;
+  if (makes <= 6) return 3;
+  if (makes <= 8) return 4;
+  return 5;
+}
 
 const emptyLoadForm = { rpe: "7", durationMinutes: "60" };
 
@@ -131,11 +169,22 @@ export default function RendimientoPage() {
 
   function addTestRow(category: string, testName: string, unit: string) {
     if (testRows.some((t) => t.testName === testName)) return;
-    setTestRows([...testRows, { category, testName, value: "", unit }]);
+    setTestRows([...testRows, { category, testName, value: "", unit, makes: SHOT_BASED_TESTS.has(testName) ? "" : undefined }]);
   }
 
   function updateTestValue(testName: string, value: string) {
     setTestRows((rows) => rows.map((r) => (r.testName === testName ? { ...r, value } : r)));
+  }
+
+  /** Solo para pruebas tecnicas (SHOT_BASED_TESTS): guarda los aciertos de 10 y calcula el puntaje 1-5. */
+  function updateTestMakes(testName: string, makes: string) {
+    setTestRows((rows) =>
+      rows.map((r) => {
+        if (r.testName !== testName) return r;
+        const n = makes === "" ? null : Math.max(0, Math.min(10, Number(makes)));
+        return { ...r, makes: n === null ? "" : String(n), value: n === null ? "" : String(scoreFromMakes(n)) };
+      })
+    );
   }
 
   function removeTestRow(testName: string) {
@@ -160,7 +209,13 @@ export default function RendimientoPage() {
           playerId: selectedPlayerId,
           date: evalDate,
           notes: evalNotes || null,
-          tests: filled.map((t) => ({ category: t.category, testName: t.testName, value: t.value, unit: t.unit })),
+          tests: filled.map((t) => ({
+            category: t.category,
+            testName: t.testName,
+            value: t.value,
+            unit: t.unit,
+            notes: t.makes ? `${t.makes}/10 aciertos` : null,
+          })),
         }),
       });
       const data = await res.json();
@@ -168,7 +223,7 @@ export default function RendimientoPage() {
         setEvalError(data.error ?? "No se pudo guardar la evaluacion");
         return;
       }
-      setTestRows((rows) => rows.map((r) => ({ ...r, value: "" })));
+      setTestRows((rows) => rows.map((r) => ({ ...r, value: "", makes: r.makes !== undefined ? "" : undefined })));
       setEvalNotes("");
       await loadProfile(selectedPlayerId);
     } finally {
@@ -276,14 +331,44 @@ export default function RendimientoPage() {
                       {testRows.map((t) => (
                         <div key={t.testName} className="flex items-center gap-2">
                           <span className="w-28 shrink-0 text-xs text-slate-500">{t.testName}</span>
-                          <input
-                            type="number"
-                            step="any"
-                            className="input"
-                            placeholder={t.unit}
-                            value={t.value}
-                            onChange={(e) => updateTestValue(t.testName, e.target.value)}
-                          />
+
+                          {t.makes !== undefined ? (
+                            // Pruebas tecnicas: se registran los aciertos de 10 lanzamientos/repeticiones
+                            // y la app calcula sola el puntaje de 1 a 5 (ver scoreFromMakes).
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                className="input"
+                                placeholder="Aciertos de 10"
+                                value={t.makes}
+                                onChange={(e) => updateTestMakes(t.testName, e.target.value)}
+                              />
+                              <span className="w-24 shrink-0 text-center text-xs font-semibold text-turqui-700">
+                                {t.value ? `${t.value}/5 pts` : "sin datos"}
+                              </span>
+                            </>
+                          ) : t.category === "ATTITUDE" ? (
+                            <select className="input" value={t.value} onChange={(e) => updateTestValue(t.testName, e.target.value)}>
+                              <option value="">Selecciona (1-5)</option>
+                              <option value="1">1 - Bajo</option>
+                              <option value="2">2 - Regular</option>
+                              <option value="3">3 - Bueno</option>
+                              <option value="4">4 - Muy bueno</option>
+                              <option value="5">5 - Excelente</option>
+                            </select>
+                          ) : (
+                            <input
+                              type="number"
+                              step="any"
+                              className="input"
+                              placeholder={t.unit}
+                              value={t.value}
+                              onChange={(e) => updateTestValue(t.testName, e.target.value)}
+                            />
+                          )}
+
                           <button type="button" className="btn-ghost text-choles-red" onClick={() => removeTestRow(t.testName)}>
                             <Trash2 className="h-4 w-4" />
                           </button>
