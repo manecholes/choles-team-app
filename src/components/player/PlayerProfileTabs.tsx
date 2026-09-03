@@ -739,6 +739,7 @@ function EvaluacionesTab({ profile }: { profile: PlayerProfileData }) {
                 <p className="text-lg font-bold text-slate-700">
                   {t.value} <span className="text-xs font-normal text-slate-400">{t.unit}</span>
                 </p>
+                {t.notes && <p className="mt-0.5 text-[10px] text-slate-400">{t.notes}</p>}
               </div>
             ))}
           </div>
