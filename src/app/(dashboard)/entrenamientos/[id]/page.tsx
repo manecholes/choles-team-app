@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, X, FileWarning } from "lucide-react";
 import Link from "next/link";
+import { formatDateCO } from "@/lib/date-format";
 
 type Status = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
 
@@ -100,7 +101,7 @@ export default function TrainingAttendancePage() {
       <div className="card">
         <h1 className="text-lg font-bold text-slate-800">{session.team.name}</h1>
         <p className="text-sm text-slate-500">
-          {new Date(session.date).toLocaleDateString("es-CO")} - {session.startTime} a {session.endTime}
+          {formatDateCO(session.date)} - {session.startTime} a {session.endTime}
         </p>
         <p className="mt-1 text-sm">
           Asistencia actual: <span className="font-bold text-turqui-700">{pct}%</span> ({presentCount}/{roster.length})
