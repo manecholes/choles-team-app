@@ -9,6 +9,7 @@ import {
   AttendanceChart,
   PlayersByCategoryChart,
 } from "@/components/charts/DashboardCharts";
+import { formatDateCO } from "@/lib/date-format";
 
 function formatCOP(value: number) {
   return value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -131,7 +132,7 @@ export default async function DashboardPage() {
           items={summary.alerts.upcomingDuePlayers.map((p) => ({
             id: p.playerId,
             primary: p.playerName,
-            secondary: `${formatCOP(p.debt)} - vence ${new Date(p.dueDate).toLocaleDateString("es-CO")}`,
+            secondary: `${formatCOP(p.debt)} - vence ${formatDateCO(p.dueDate)}`,
           }))}
           emptyText="Sin pagos por vencer en el corto plazo"
         />
