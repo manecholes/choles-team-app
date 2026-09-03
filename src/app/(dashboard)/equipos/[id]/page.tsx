@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getTeamDetail } from "@/server/services/team.service";
 import { attendancePercentage } from "@/server/logic/attendance";
 import { TeamRoster } from "@/components/team/TeamRoster";
+import { formatDateCO } from "@/lib/date-format";
 
 export default async function TeamDetailPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -59,7 +60,7 @@ export default async function TeamDetailPage({ params }: { params: { id: string 
               {upcomingMatches.map((m) => (
                 <li key={m.id} className="rounded-lg border border-slate-100 p-2 text-sm">
                   <p className="font-medium">vs {m.opponentName}</p>
-                  <p className="text-slate-400">{new Date(m.date).toLocaleDateString("es-CO")} - {m.time}</p>
+                  <p className="text-slate-400">{formatDateCO(m.date)} - {m.time}</p>
                 </li>
               ))}
             </ul>
@@ -71,7 +72,7 @@ export default async function TeamDetailPage({ params }: { params: { id: string 
             <ul className="space-y-2">
               {upcomingTrainings.map((s) => (
                 <li key={s.id} className="rounded-lg border border-slate-100 p-2 text-sm">
-                  <p className="font-medium">{new Date(s.date).toLocaleDateString("es-CO")}</p>
+                  <p className="font-medium">{formatDateCO(s.date)}</p>
                   <p className="text-slate-400">{s.startTime} - {s.endTime} en {s.location ?? "por definir"}</p>
                 </li>
               ))}
@@ -95,7 +96,7 @@ export default async function TeamDetailPage({ params }: { params: { id: string 
             <tbody>
               {pastMatches.map((m) => (
                 <tr key={m.id}>
-                  <td>{new Date(m.date).toLocaleDateString("es-CO")}</td>
+                  <td>{formatDateCO(m.date)}</td>
                   <td>{m.opponentName}</td>
                   <td className="font-medium">
                     {m.resultTeamScore} - {m.resultOpponentScore}
