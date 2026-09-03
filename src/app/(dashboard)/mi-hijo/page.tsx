@@ -29,7 +29,10 @@ function fmtMoney(n: number) {
 }
 
 function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" });
+  // timeZone: "UTC" evita que una fecha guardada como medianoche UTC (ej. el
+  // dia de un partido/entrenamiento) se muestre corrida un dia hacia atras
+  // en la zona horaria local del navegador (Colombia = UTC-5).
+  return new Date(d).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 export default function MiHijoPage() {
