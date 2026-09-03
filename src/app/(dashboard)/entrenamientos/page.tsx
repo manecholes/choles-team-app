@@ -6,6 +6,7 @@ import { Plus, ClipboardCheck, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge } from "@/components/Badge";
+import { formatDateCO } from "@/lib/date-format";
 
 interface Training {
   id: number;
@@ -96,7 +97,7 @@ export default function EntrenamientosPage() {
       header: "Fecha",
       render: (t) => (
         <div>
-          <p className="font-medium">{new Date(t.date).toLocaleDateString("es-CO")}</p>
+          <p className="font-medium">{formatDateCO(t.date)}</p>
           <p className="text-xs text-slate-400">
             {t.startTime} - {t.endTime}
           </p>
