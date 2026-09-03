@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Wand2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
+import { formatDateCO } from "@/lib/date-format";
 
 interface Participant {
   kind: "team" | "external";
@@ -101,7 +102,7 @@ export default function TournamentDetailPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800">{tournament.name}</h1>
           <p className="text-sm text-slate-500">
-            {new Date(tournament.startDate).toLocaleDateString("es-CO")} - {new Date(tournament.endDate).toLocaleDateString("es-CO")}
+            {formatDateCO(tournament.startDate)} - {formatDateCO(tournament.endDate)}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -174,7 +175,7 @@ export default function TournamentDetailPage() {
               const b = statusBadge("match", m.status);
               return (
                 <tr key={m.id}>
-                  <td>{new Date(m.date).toLocaleDateString("es-CO")}</td>
+                  <td>{formatDateCO(m.date)}</td>
                   <td>{m.team.name}</td>
                   <td>{m.opponentName}</td>
                   <td>{m.resultTeamScore !== null ? `${m.resultTeamScore} - ${m.resultOpponentScore}` : "-"}</td>
