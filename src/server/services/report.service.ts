@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { attendancePercentage, type AttendanceStatus as AttStatus } from "@/server/logic/attendance";
 import { effectiveStatus } from "@/server/logic/cartera";
+import { formatDateCO } from "@/lib/date-format";
 
 export interface ReportColumn {
   header: string;
@@ -301,7 +302,7 @@ async function evaluationsReport(clubId: number, filters: ReportFilters): Promis
     for (const t of ev.tests) {
       rows.push({
         player: `${ev.player.firstName} ${ev.player.lastName}`,
-        date: ev.date.toLocaleDateString("es-CO"),
+        date: formatDateCO(ev.date),
         test: t.testName,
         value: t.value,
         unit: t.unit,
@@ -347,7 +348,7 @@ async function matchesReport(clubId: number, filters: ReportFilters): Promise<Re
       { header: "Estado", key: "statusLabel", width: 80 },
     ],
     rows: matches.map((m) => ({
-      date: m.date.toLocaleDateString("es-CO"),
+      date: formatDateCO(m.date),
       team: m.team.name,
       opponent: m.opponentName,
       homeAway: m.isHome ? "Local" : "Visitante",
@@ -382,7 +383,7 @@ async function tournamentsReport(clubId: number): Promise<ReportResult> {
       teamsCount: t.teams.length,
       matchesCount: t._count.matches,
       statusLabel: t.status === "FINISHED" ? "Finalizado" : t.status === "IN_PROGRESS" ? "En curso" : "Planeado",
-      startDate: t.startDate.toLocaleDateString("es-CO"),
+      startDate: formatDateCO(t.startDate),
     })),
   };
 }
