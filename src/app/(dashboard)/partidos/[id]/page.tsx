@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { formatDateCO } from "@/lib/date-format";
 
 interface StatRow {
   player: { id: number; firstName: string; lastName: string };
@@ -114,7 +115,7 @@ export default function MatchStatsPage() {
             {match.team.name} vs {match.opponentName}
           </h1>
           <p className="text-sm text-slate-500">
-            {new Date(match.date).toLocaleDateString("es-CO")} - {match.time}
+            {formatDateCO(match.date)} - {match.time}
           </p>
         </div>
         <div className="flex items-center gap-3">
