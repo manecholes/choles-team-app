@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Download, CheckCircle2, Trash2, Settings } from "lucide-react";
+import { Plus, Download, CheckCircle2, Trash2, Settings, Pencil, RefreshCw } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
@@ -18,8 +18,9 @@ interface Concept {
 interface PaymentRow {
   id: number;
   amount: number;
-  status: "PAID" | "PENDING" | "OVERDUE";
-  effectiveStatus: "PAID" | "PENDING" | "OVERDUE";
+  amountPaid: number;
+  status: "PAID" | "PENDING" | "OVERDUE" | "PARTIAL";
+  effectiveStatus: "PAID" | "PENDING" | "OVERDUE" | "PARTIAL";
   method: string | null;
   dueDate: string | null;
   paymentDate: string | null;
@@ -39,9 +40,10 @@ const emptyForm = {
   playerId: "" as string | number,
   conceptId: "" as string | number,
   amount: "",
+  amountPaid: "",
   dueDate: "",
   periodLabel: "",
-  status: "PENDING" as "PAID" | "PENDING",
+  status: "PENDING" as "PAID" | "PENDING" | "PARTIAL",
   method: "EFECTIVO" as string,
   paymentDate: "",
 };
@@ -59,6 +61,8 @@ export default function PagosPage() {
   const [conceptForm, setConceptForm] = useState(emptyConceptForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -73,12 +77,49 @@ export default function PagosPage() {
     setLoading(false);
   }
 
+  /** Genera el cargo de mensualidad del mes para todos los jugadores activos que aun no lo tengan (es segura de llamar varias veces). */
+  async function generateMonthly(showAlert = false) {
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/payments/generate-monthly", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (showAlert) {
+        if (res.ok) alert(data?.created ? `Se generaron ${data.created} mensualidades nuevas.` : "Ya estaban generadas las mensualidades de este mes.");
+        else alert(data?.error ?? "No se pudieron generar las mensualidades");
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   useEffect(() => {
-    loadData();
+    (async () => {
+      await generateMonthly();
+      await loadData();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function openCreate() {
     setForm(emptyForm);
+    setEditingId(null);
+    setError(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(p: PaymentRow) {
+    setForm({
+      playerId: p.player.id,
+      conceptId: p.concept.id,
+      amount: String(p.amount),
+      amountPaid: String(p.amountPaid ?? 0),
+      dueDate: p.dueDate ? p.dueDate.slice(0, 10) : "",
+      periodLabel: p.periodLabel ?? "",
+      status: p.status === "OVERDUE" ? "PENDING" : (p.status as "PAID" | "PENDING" | "PARTIAL"),
+      method: p.method ?? "EFECTIVO",
+      paymentDate: p.paymentDate ? p.paymentDate.slice(0, 10) : "",
+    });
+    setEditingId(p.id);
     setError(null);
     setModalOpen(true);
   }
@@ -93,19 +134,21 @@ export default function PagosPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/payments", {
-        method: "POST",
+      const payingNow = form.status === "PAID" || form.status === "PARTIAL";
+      const res = await fetch(editingId ? `/api/payments/${editingId}` : "/api/payments", {
+        method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          amountPaid: form.status === "PARTIAL" ? form.amountPaid || "0" : undefined,
           dueDate: form.dueDate || null,
-          method: form.status === "PAID" ? form.method : null,
-          paymentDate: form.status === "PAID" ? form.paymentDate || new Date().toISOString() : null,
+          method: payingNow ? form.method : null,
+          paymentDate: payingNow ? form.paymentDate || new Date().toISOString() : null,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "No se pudo registrar el pago");
+        setError(data.error ?? "No se pudo guardar el pago");
         return;
       }
       setModalOpen(false);
@@ -158,6 +201,7 @@ export default function PagosPage() {
     { key: "concept", header: "Concepto", render: (p) => p.concept.name },
     { key: "period", header: "Periodo", render: (p) => p.periodLabel ?? "-" },
     { key: "amount", header: "Valor", render: (p) => fmtMoney(p.amount) },
+    { key: "amountPaid", header: "Valor pagado", render: (p) => (p.effectiveStatus === "PARTIAL" ? fmtMoney(p.amountPaid) : "-") },
     { key: "method", header: "Metodo", render: (p) => p.method ?? "-" },
     { key: "due", header: "Vencimiento", render: (p) => (p.dueDate ? formatDateCO(p.dueDate) : "-") },
     {
@@ -173,6 +217,9 @@ export default function PagosPage() {
       header: "",
       render: (p) => (
         <div className="flex gap-2">
+          <button className="btn-ghost" onClick={() => openEdit(p)} title="Editar pago">
+            <Pencil className="h-4 w-4" />
+          </button>
           {p.effectiveStatus !== "PAID" && (
             <button className="btn-secondary" onClick={() => handleMarkPaid(p)} title="Marcar como pagado">
               <CheckCircle2 className="h-4 w-4" />
@@ -198,9 +245,14 @@ export default function PagosPage() {
           <h1 className="text-xl font-bold text-slate-800">Pagos</h1>
           <p className="text-sm text-slate-500">Registra matriculas, mensualidades, uniformes y demas conceptos.</p>
         </div>
-        <button className="btn-secondary" onClick={() => setConceptsModalOpen(true)}>
-          <Settings className="h-4 w-4" /> Conceptos
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={() => generateMonthly(true)} disabled={generating} title="Genera el cargo de mensualidad del mes para los jugadores activos que aun no lo tengan">
+            <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} /> Generar mensualidades
+          </button>
+          <button className="btn-secondary" onClick={() => setConceptsModalOpen(true)}>
+            <Settings className="h-4 w-4" /> Conceptos
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -218,7 +270,7 @@ export default function PagosPage() {
         />
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Registrar pago">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "Editar pago" : "Registrar pago"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Jugador</label>
@@ -260,10 +312,23 @@ export default function PagosPage() {
             <label className="label">Estado</label>
             <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as any })}>
               <option value="PENDING">Pendiente</option>
-              <option value="PAID">Pagado ahora</option>
+              <option value="PARTIAL">Abono</option>
+              <option value="PAID">Pagado</option>
             </select>
           </div>
-          {form.status === "PAID" && (
+          {form.status === "PARTIAL" && (
+            <div>
+              <label className="label">Valor pagado (abono)</label>
+              <input
+                type="number"
+                required
+                className="input"
+                value={form.amountPaid}
+                onChange={(e) => setForm({ ...form, amountPaid: e.target.value })}
+              />
+            </div>
+          )}
+          {(form.status === "PAID" || form.status === "PARTIAL") && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Metodo de pago</label>
@@ -283,7 +348,7 @@ export default function PagosPage() {
           )}
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           <button type="submit" disabled={saving} className="btn-primary w-full">
-            {saving ? "Guardando..." : "Registrar pago"}
+            {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Registrar pago"}
           </button>
         </form>
       </Modal>
