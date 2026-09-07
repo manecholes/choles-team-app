@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { attendancePercentage, isLowAttendance, type AttendanceStatus as AttStatus } from "@/server/logic/attendance";
 import { computeAcwr, classifyLoadStatus } from "@/server/logic/load";
-import { effectiveStatus } from "@/server/logic/cartera";
+import { effectiveStatus, outstandingBalance } from "@/server/logic/cartera";
 
 export interface DashboardSummary {
   activePlayers: number;
@@ -70,10 +70,11 @@ export async function getDashboardSummary(clubId: number): Promise<DashboardSumm
   });
 
   const outstandingPayments = await prisma.payment.findMany({
-    where: { clubId, status: { in: ["PENDING", "OVERDUE"] } },
+    where: { clubId, status: { in: ["PENDING", "OVERDUE", "PARTIAL"] } },
     select: {
       id: true,
       amount: true,
+      amountPaid: true,
       dueDate: true,
       status: true,
       paymentDate: true,
@@ -91,25 +92,27 @@ export async function getDashboardSummary(clubId: number): Promise<DashboardSumm
 
   for (const p of outstandingPayments) {
     const eff = effectiveStatus(
-      { status: p.status, dueDate: p.dueDate ? p.dueDate.toISOString() : null, paymentDate: null, amount: p.amount },
+      { status: p.status, dueDate: p.dueDate ? p.dueDate.toISOString() : null, paymentDate: null, amount: p.amount, amountPaid: p.amountPaid },
       now
     );
     const playerName = `${p.player.firstName} ${p.player.lastName}`;
     const categoryName = p.player.category?.name ?? "Sin categoria";
-    debtByCategory.set(categoryName, (debtByCategory.get(categoryName) ?? 0) + p.amount);
+    const balance = outstandingBalance(p);
+    debtByCategory.set(categoryName, (debtByCategory.get(categoryName) ?? 0) + balance);
 
     if (eff === "OVERDUE") {
       overduePaymentsCount++;
-      overduePaymentsTotal += p.amount;
+      overduePaymentsTotal += balance;
       const acc = overdueByPlayer.get(p.player.id) ?? { playerName, debt: 0 };
-      acc.debt += p.amount;
+      acc.debt += balance;
       overdueByPlayer.set(p.player.id, acc);
     } else {
+      // Pendiente o Abono (todavia no vencido): se agrupan igual para el resumen del dashboard.
       pendingPaymentsCount++;
-      pendingPaymentsTotal += p.amount;
+      pendingPaymentsTotal += balance;
       if (p.dueDate) {
         const acc = upcomingByPlayer.get(p.player.id) ?? { playerName, debt: 0, dueDate: p.dueDate };
-        acc.debt += p.amount;
+        acc.debt += balance;
         upcomingByPlayer.set(p.player.id, acc);
       }
     }
