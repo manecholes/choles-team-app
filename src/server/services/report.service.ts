@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { attendancePercentage, type AttendanceStatus as AttStatus } from "@/server/logic/attendance";
-import { effectiveStatus } from "@/server/logic/cartera";
+import { effectiveStatus, outstandingBalance } from "@/server/logic/cartera";
 import { formatDateCO } from "@/lib/date-format";
 
 export interface ReportColumn {
@@ -165,19 +165,22 @@ function fmtMoney(n: number) {
 }
 
 async function revenueReport(clubId: number, filters: ReportFilters): Promise<ReportResult> {
-  const where: any = { clubId, status: "PAID" };
+  // Ingresos reales: pagos completos (PAID) por su valor total, mas lo efectivamente
+  // abonado (amountPaid) en pagos parciales (PARTIAL) - la plata que de verdad entro.
+  const where: any = { clubId, status: { in: ["PAID", "PARTIAL"] } };
   if (filters.from || filters.to) {
     where.paymentDate = {};
     if (filters.from) where.paymentDate.gte = new Date(filters.from);
     if (filters.to) where.paymentDate.lte = new Date(filters.to);
   }
-  const payments = await prisma.payment.findMany({ where, select: { amount: true, paymentDate: true } });
+  const payments = await prisma.payment.findMany({ where, select: { amount: true, amountPaid: true, status: true, paymentDate: true } });
 
   const byMonth = new Map<string, number>();
   for (const p of payments) {
     if (!p.paymentDate) continue;
     const key = `${p.paymentDate.getFullYear()}-${String(p.paymentDate.getMonth() + 1).padStart(2, "0")}`;
-    byMonth.set(key, (byMonth.get(key) ?? 0) + p.amount);
+    const received = p.status === "PAID" ? p.amount : p.amountPaid;
+    byMonth.set(key, (byMonth.get(key) ?? 0) + received);
   }
 
   return {
@@ -211,6 +214,7 @@ async function paymentsReport(clubId: number, filters: ReportFilters): Promise<R
       { header: "Jugador", key: "player", width: 150 },
       { header: "Concepto", key: "concept", width: 110 },
       { header: "Valor", key: "amountFmt", width: 100 },
+      { header: "Valor pagado", key: "amountPaidFmt", width: 100 },
       { header: "Metodo", key: "method", width: 90 },
       { header: "Estado", key: "statusLabel", width: 80 },
       { header: "Recibo", key: "receiptNumber", width: 90 },
@@ -221,13 +225,15 @@ async function paymentsReport(clubId: number, filters: ReportFilters): Promise<R
         dueDate: p.dueDate?.toISOString() ?? null,
         paymentDate: p.paymentDate?.toISOString() ?? null,
         amount: p.amount,
+        amountPaid: p.amountPaid,
       });
       return {
         player: `${p.player.firstName} ${p.player.lastName}`,
         concept: p.concept.name,
         amountFmt: fmtMoney(p.amount),
+        amountPaidFmt: fmtMoney(p.amountPaid),
         method: p.method ?? "-",
-        statusLabel: eff === "PAID" ? "Pagado" : eff === "OVERDUE" ? "Vencido" : "Pendiente",
+        statusLabel: eff === "PAID" ? "Pagado" : eff === "OVERDUE" ? "Vencido" : eff === "PARTIAL" ? "Abono" : "Pendiente",
         receiptNumber: p.receiptNumber,
       };
     }),
