@@ -16,7 +16,7 @@ interface CarteraRow {
   monthsPending: number;
   lastPayment: string | null;
   maxDaysOverdue: number;
-  status: "PENDING" | "OVERDUE";
+  status: "PENDING" | "OVERDUE" | "PARTIAL";
 }
 
 interface Category {
@@ -147,6 +147,7 @@ export default function CarteraPage() {
             <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">Todos</option>
               <option value="PENDING">Pendiente</option>
+              <option value="PARTIAL">Abono</option>
               <option value="OVERDUE">Vencido</option>
             </select>
           </div>
