@@ -1,50 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { assertPermission, handleApiError, resolveClubScope } from "@/lib/api-utils";
+import { assertPermission, handleApiError, jsonOk, resolveClubScope } from "@/lib/api-utils";
 import { getCartera } from "@/server/services/payment.service";
-import { buildExcelBuffer } from "@/lib/excel";
-import { formatDateCO } from "@/lib/date-format";
 
+/**
+ * Datos del panel de Cartera (punto 13) para la pantalla /cartera: filas por
+ * jugador con deuda + totales. Devuelve JSON, a diferencia de
+ * /api/cartera/export que genera el Excel descargable con las mismas filas.
+ */
 export async function GET(req: NextRequest) {
   try {
     const user = await requireUser(req);
-    assertPermission(user, "cartera:export");
+    assertPermission(user, "cartera:read");
     const clubId = resolveClubScope(user);
-    if (!clubId) throw new Error("Club no resuelto");
+    if (!clubId) return jsonOk({ rows: [], totals: { totalDebt: 0, players: 0 } });
 
     const { searchParams } = new URL(req.url);
-    const { rows } = await getCartera(clubId, {
+    const result = await getCartera(clubId, {
       categoryId: searchParams.get("categoryId") ? Number(searchParams.get("categoryId")) : undefined,
       teamId: searchParams.get("teamId") ? Number(searchParams.get("teamId")) : undefined,
       month: searchParams.get("month") ?? undefined,
       status: (searchParams.get("status") as "PENDING" | "OVERDUE" | "PARTIAL") || undefined,
     });
 
-    const buffer = await buildExcelBuffer(
-      "Cartera",
-      [
-        { header: "Jugador", key: "playerName", width: 30 },
-        { header: "Categoria", key: "category", width: 15 },
-        { header: "Equipo", key: "team", width: 20 },
-        { header: "Valor adeudado", key: "debt", width: 18 },
-        { header: "Meses pendientes", key: "monthsPending", width: 16 },
-        { header: "Ultimo pago", key: "lastPayment", width: 15 },
-        { header: "Dias de mora", key: "maxDaysOverdue", width: 14 },
-        { header: "Estado", key: "status", width: 14 },
-      ],
-      rows.map((r) => ({
-        ...r,
-        lastPayment: r.lastPayment ? formatDateCO(r.lastPayment) : "-",
-        status: r.status === "OVERDUE" ? "Vencido" : r.status === "PARTIAL" ? "Abono" : "Pendiente",
-      }))
-    );
-
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="cartera-${new Date().toISOString().slice(0, 10)}.xlsx"`,
-      },
-    });
+    return jsonOk(result);
   } catch (err) {
     return handleApiError(err);
   }
