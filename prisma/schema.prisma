@@ -686,6 +686,7 @@ enum PaymentStatus {
   PAID
   PENDING
   OVERDUE
+  PARTIAL
 }
 
 model Payment {
@@ -694,6 +695,7 @@ model Payment {
   playerId       Int           @map("player_id")
   conceptId      Int           @map("concept_id")
   amount         Float
+  amountPaid     Float         @default(0) @map("amount_paid")
   paymentDate    DateTime?     @map("payment_date")
   dueDate        DateTime?     @map("due_date")
   periodLabel    String?       @map("period_label")
