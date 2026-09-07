@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       categoryId: searchParams.get("categoryId") ? Number(searchParams.get("categoryId")) : undefined,
       teamId: searchParams.get("teamId") ? Number(searchParams.get("teamId")) : undefined,
       month: searchParams.get("month") ?? undefined,
-      status: (searchParams.get("status") as "PENDING" | "OVERDUE") || undefined,
+      status: (searchParams.get("status") as "PENDING" | "OVERDUE" | "PARTIAL") || undefined,
     });
 
     const buffer = await buildExcelBuffer(
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       rows.map((r) => ({
         ...r,
         lastPayment: r.lastPayment ? formatDateCO(r.lastPayment) : "-",
-        status: r.status === "OVERDUE" ? "Vencido" : "Pendiente",
+        status: r.status === "OVERDUE" ? "Vencido" : r.status === "PARTIAL" ? "Abono" : "Pendiente",
       }))
     );
 
