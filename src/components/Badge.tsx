@@ -3,15 +3,16 @@ const TONE_CLASS: Record<string, string> = {
   yellow: "badge-yellow",
   red: "badge-red",
   gray: "badge-gray",
+  blue: "badge-blue",
 };
 
-export function Badge({ tone, children }: { tone: "green" | "yellow" | "red" | "gray"; children: React.ReactNode }) {
+export function Badge({ tone, children }: { tone: "green" | "yellow" | "red" | "gray" | "blue"; children: React.ReactNode }) {
   return <span className={TONE_CLASS[tone]}>{children}</span>;
 }
 
 /** Traduce estados de negocio comunes a (texto, tono) para reusar en toda la app. */
-export function statusBadge(kind: "player" | "payment" | "match" | "tournament" | "category" | "team", value: string): { label: string; tone: "green" | "yellow" | "red" | "gray" } {
-  const maps: Record<string, Record<string, { label: string; tone: "green" | "yellow" | "red" | "gray" }>> = {
+export function statusBadge(kind: "player" | "payment" | "match" | "tournament" | "category" | "team", value: string): { label: string; tone: "green" | "yellow" | "red" | "gray" | "blue" } {
+  const maps: Record<string, Record<string, { label: string; tone: "green" | "yellow" | "red" | "gray" | "blue" }>> = {
     player: {
       ACTIVE: { label: "Activo", tone: "green" },
       INACTIVE: { label: "Inactivo", tone: "gray" },
@@ -22,6 +23,7 @@ export function statusBadge(kind: "player" | "payment" | "match" | "tournament" 
       PAID: { label: "Pagado", tone: "green" },
       PENDING: { label: "Pendiente", tone: "yellow" },
       OVERDUE: { label: "Vencido", tone: "red" },
+      PARTIAL: { label: "Abono", tone: "blue" },
     },
     match: {
       SCHEDULED: { label: "Programado", tone: "gray" },
