@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, ForbiddenError } from "@/lib/auth";
 import { attendancePercentage, type AttendanceStatus as AttStatus } from "@/server/logic/attendance";
-import { effectiveStatus, daysOverdue } from "@/server/logic/cartera";
+import { effectiveStatus, daysOverdue, outstandingBalance } from "@/server/logic/cartera";
 
 /**
  * Crea el acceso (usuario/contrasena) para un padre/tutor ya registrado
@@ -69,7 +69,7 @@ export async function getChildSummary(clubId: number, playerId: number) {
         })
       : null,
     prisma.payment.findMany({
-      where: { clubId, playerId, status: { in: ["PENDING", "OVERDUE"] } },
+      where: { clubId, playerId, status: { in: ["PENDING", "OVERDUE", "PARTIAL"] } },
       include: { concept: { select: { name: true } } },
       orderBy: { dueDate: "asc" },
     }),
@@ -89,12 +89,13 @@ export async function getChildSummary(clubId: number, playerId: number) {
         dueDate: p.dueDate?.toISOString() ?? null,
         paymentDate: null,
         amount: p.amount,
+        amountPaid: p.amountPaid,
       }),
       daysOverdue: daysOverdue(p.dueDate?.toISOString() ?? null),
     }))
     .filter((p) => p.effective !== "PAID");
 
-  const totalDebt = pendingPayments.reduce((acc, p) => acc + p.amount, 0);
+  const totalDebt = pendingPayments.reduce((acc, p) => acc + outstandingBalance(p), 0);
   const overdueCount = pendingPayments.filter((p) => p.effective === "OVERDUE").length;
 
   return {
@@ -117,6 +118,7 @@ export async function getChildSummary(clubId: number, playerId: number) {
         id: p.id,
         concept: p.concept.name,
         amount: p.amount,
+        amountPaid: p.amountPaid,
         dueDate: p.dueDate,
         status: p.effective,
         daysOverdue: p.daysOverdue,
