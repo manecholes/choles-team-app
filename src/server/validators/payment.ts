@@ -11,9 +11,10 @@ export const paymentSchema = z.object({
   playerId: z.coerce.number().int().positive(),
   conceptId: z.coerce.number().int().positive(),
   amount: z.coerce.number().positive(),
+  amountPaid: z.coerce.number().min(0).optional(),
   dueDate: z.coerce.date().optional().nullable(),
   periodLabel: z.string().max(20).optional().nullable(),
-  status: z.enum(["PAID", "PENDING", "OVERDUE"]).default("PENDING"),
+  status: z.enum(["PAID", "PENDING", "OVERDUE", "PARTIAL"]).default("PENDING"),
   method: z.enum(["EFECTIVO", "TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"]).optional().nullable(),
   paymentDate: z.coerce.date().optional().nullable(),
 });
@@ -21,4 +22,8 @@ export const paymentSchema = z.object({
 export const markPaidSchema = z.object({
   method: z.enum(["EFECTIVO", "TRANSFERENCIA", "NEQUI", "DAVIPLATA", "BANCOLOMBIA"]),
   paymentDate: z.coerce.date().optional(),
+});
+
+export const generateMonthlyChargesSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/).optional(), // "2026-09"; por defecto el mes actual
 });
