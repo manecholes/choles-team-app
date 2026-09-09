@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as Icons from "lucide-react";
-import { NAV_ITEMS } from "@/lib/permissions";
+import { NAV_ITEMS, canSeeNavItem } from "@/lib/permissions";
 import type { UserRole } from "@prisma/client";
-import { hasResourceAccess } from "@/lib/permissions";
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter((item) => hasResourceAccess(role, item.resource));
+  const items = NAV_ITEMS.filter((item) => canSeeNavItem(role, item));
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-turqui-800 text-turqui-50 md:flex">
