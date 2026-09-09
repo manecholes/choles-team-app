@@ -141,6 +141,16 @@ export const NAV_ITEMS: Array<{
   label: string;
   icon: string;
   resource: string;
+  /**
+   * Permiso EXACTO requerido para ver este item (en vez del chequeo laxo de
+   * `hasResourceAccess`, que muestra el item con CUALQUIER sufijo sobre el
+   * recurso). Usar cuando el modulo destino es de administracion completa
+   * (crear/editar/borrar) y un rol con acceso solo de lectura/"_own" sobre
+   * ese mismo recurso (ej. GUARDIAN o DELEGATE con "payments:read_own") no
+   * debe llegar a esa pantalla — ese rol ya tiene su propia vista de solo
+   * lectura (ej. "Mi Hijo" para pagos).
+   */
+  permission?: string;
 }> = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard", resource: "dashboard" },
   { href: "/mi-hijo", label: "Mi Hijo", icon: "Heart", resource: "children" },
@@ -153,10 +163,16 @@ export const NAV_ITEMS: Array<{
   { href: "/entrenamientos", label: "Entrenamientos", icon: "Dumbbell", resource: "trainings" },
   { href: "/partidos", label: "Partidos", icon: "Trophy", resource: "matches" },
   { href: "/torneos", label: "Torneos", icon: "Medal", resource: "tournaments" },
-  { href: "/pagos", label: "Pagos", icon: "Wallet", resource: "payments" },
+  { href: "/pagos", label: "Pagos", icon: "Wallet", resource: "payments", permission: "payments:write" },
   { href: "/comunicaciones", label: "Comunicaciones", icon: "Bell", resource: "communications" },
   { href: "/rendimiento", label: "Rendimiento", icon: "LineChart", resource: "evaluations" },
   { href: "/reportes", label: "Reportes", icon: "FileBarChart", resource: "reports" },
   { href: "/documentos", label: "Documentos", icon: "Folder", resource: "documents" },
   { href: "/configuracion", label: "Configuracion", icon: "Settings", resource: "settings" },
 ];
+
+/** Decide si un item del sidebar se muestra para este rol (ver comentario de `permission` arriba). */
+export function canSeeNavItem(role: UserRole, item: { resource: string; permission?: string }): boolean {
+  if (item.permission) return can(role, item.permission);
+  return hasResourceAccess(role, item.resource);
+}
