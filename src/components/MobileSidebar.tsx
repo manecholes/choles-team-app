@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as Icons from "lucide-react";
 import { X } from "lucide-react";
-import { NAV_ITEMS, hasResourceAccess } from "@/lib/permissions";
+import { NAV_ITEMS, canSeeNavItem } from "@/lib/permissions";
 import type { UserRole } from "@prisma/client";
 
 export function MobileSidebar({
@@ -17,7 +17,7 @@ export function MobileSidebar({
   role: UserRole;
 }) {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter((item) => hasResourceAccess(role, item.resource));
+  const items = NAV_ITEMS.filter((item) => canSeeNavItem(role, item));
 
   if (!open) return null;
 
