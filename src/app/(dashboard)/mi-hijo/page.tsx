@@ -161,7 +161,10 @@ export default function MiHijoPage() {
               ) : (
                 <p className="text-sm text-green-700">Al dia, sin pagos pendientes.</p>
               )}
-              <Link href="/pagos" className="mt-2 inline-flex items-center gap-1 text-xs text-turqui-600 hover:underline">
+              <Link
+                href={`/mi-hijo/pagos?playerId=${summary.player.id}`}
+                className="mt-2 inline-flex items-center gap-1 text-xs text-turqui-600 hover:underline"
+              >
                 Ver detalle y recibos <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
