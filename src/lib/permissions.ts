@@ -60,6 +60,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "reports:export",
     "settings:read",
     "settings:write",
+    "training_requests:read",
+    "training_requests:review",
   ],
 
   COACH: [
@@ -75,6 +77,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "matches:write_own",
     "evaluations:read_own",
     "evaluations:write_own",
+    "training_requests:read_own",
+    "training_requests:review_own",
   ],
 
   DELEGATE: [
@@ -96,6 +100,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "receipts:read_own",
     "communications:read_own",
     "evaluations:read_own_authorized",
+    "training_requests:read_own",
   ],
 
   PLAYER: [
@@ -104,6 +109,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "matches:read_own",
     "statistics:read_own",
     "evaluations:read_own_authorized",
+    "training_requests:read_own",
+    "training_requests:write_own",
   ],
 };
 
