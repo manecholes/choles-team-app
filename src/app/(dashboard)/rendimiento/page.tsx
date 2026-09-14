@@ -43,12 +43,14 @@ const TEST_CATALOG: Record<string, Array<{ testName: string; unit: string }>> = 
     { testName: "Illinois", unit: "s" },
   ],
   JUMP: [
-    { testName: "Salto vertical", unit: "cm" },
+    { testName: "SJ", unit: "cm" },
     { testName: "CMJ", unit: "cm" },
+    { testName: "SC", unit: "cm" },
   ],
   ENDURANCE: [
     { testName: "Yo-Yo", unit: "m" },
     { testName: "30-15 VIFT", unit: "km/h" },
+    { testName: "Course Navette", unit: "nivel" },
   ],
   STRENGTH: [{ testName: "Prueba de fuerza", unit: "kg" }],
   TECHNICAL: [
