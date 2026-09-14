@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Dumbbell, Trophy, Calendar, Wallet, LineChart, ClipboardList, Bell, ArrowRight } from "lucide-react";
+import { Dumbbell, Trophy, Calendar, Wallet, LineChart, ClipboardList, Bell, ArrowRight, CalendarPlus } from "lucide-react";
 import { Badge, statusBadge } from "@/components/Badge";
+import { formatDateCO } from "@/lib/date-format";
 
 interface ChildOption {
   id: number;
@@ -35,11 +36,30 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
+interface TrainingRequest {
+  id: number;
+  requestedDate: string;
+  startTime: string;
+  endTime: string | null;
+  location: string | null;
+  notes: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewNote: string | null;
+  player: { id: number };
+}
+
+const REQUEST_STATUS: Record<TrainingRequest["status"], { label: string; tone: "green" | "yellow" | "red" }> = {
+  PENDING: { label: "Pendiente de aprobacion", tone: "yellow" },
+  APPROVED: { label: "Aprobado", tone: "green" },
+  REJECTED: { label: "Rechazado", tone: "red" },
+};
+
 export default function MiHijoPage() {
   const [children, setChildren] = useState<ChildOption[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [summary, setSummary] = useState<ChildSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [trainingRequests, setTrainingRequests] = useState<TrainingRequest[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +68,10 @@ export default function MiHijoPage() {
       setChildren(data.children ?? []);
       if (data.children?.length > 0) setSelectedId(data.children[0].id);
       setLoading(false);
+    })();
+    (async () => {
+      const res = await fetch("/api/training-requests");
+      if (res.ok) setTrainingRequests((await res.json()).trainingRequests ?? []);
     })();
   }, []);
 
@@ -168,6 +192,37 @@ export default function MiHijoPage() {
                 Ver detalle y recibos <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
+          </div>
+
+          <div className="card">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <CalendarPlus className="h-4 w-4 text-turqui-600" /> Entrenamientos individuales
+            </h3>
+            {trainingRequests.filter((r) => r.player.id === summary.player.id).length === 0 ? (
+              <p className="text-sm text-slate-400">
+                {summary.player.firstName} todavia no ha solicitado ningun entrenamiento individual.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {trainingRequests
+                  .filter((r) => r.player.id === summary.player.id)
+                  .map((r) => (
+                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">
+                          {formatDateCO(r.requestedDate)} · {r.startTime}
+                          {r.endTime ? ` - ${r.endTime}` : ""}
+                          {r.location ? ` · ${r.location}` : ""}
+                        </p>
+                        {r.status === "REJECTED" && r.reviewNote && (
+                          <p className="text-xs text-choles-red">Motivo: {r.reviewNote}</p>
+                        )}
+                      </div>
+                      <Badge tone={REQUEST_STATUS[r.status].tone}>{REQUEST_STATUS[r.status].label}</Badge>
+                    </li>
+                  ))}
+              </ul>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
