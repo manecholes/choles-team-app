@@ -67,6 +67,7 @@ model Club {
   documents     Document[]
   settings      Setting[]
   auditLogs     AuditLog[]
+  trainingRequests TrainingRequest[]
 
   @@map("clubs")
 }
@@ -130,6 +131,7 @@ model User {
   registeredPayments Payment[]   @relation("PaymentRegisteredBy")
   uploadedDocuments  Document[]  @relation("DocumentUploadedBy")
   auditLogs     AuditLog[]
+  reviewedTrainingRequests TrainingRequest[] @relation("TrainingRequestReviewedBy")
 
   @@index([clubId])
   @@map("users")
@@ -315,6 +317,7 @@ model Player {
   loadEntries     LoadEntry[]
   performanceMetrics PerformanceMetric[]
   documents       Document[]
+  trainingRequests TrainingRequest[]
 
   @@index([clubId])
   @@index([categoryId])
@@ -516,6 +519,44 @@ model Attendance {
   @@unique([trainingSessionId, playerId])
   @@index([playerId])
   @@map("attendance")
+}
+
+enum TrainingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/**
+ * Solicitud de entrenamiento individual hecha por el propio jugador: el
+ * jugador propone fecha/hora/lugar de una practica extra por su cuenta
+ * (tecnica, tiro, etc.). No reemplaza ni afecta la asistencia de los
+ * entrenamientos oficiales del equipo (TrainingSession) -- es un flujo
+ * aparte, siempre visible para el jugador y sus padres/tutores. Queda en
+ * PENDING hasta que su entrenador o un administrador la aprueba o rechaza.
+ */
+model TrainingRequest {
+  id            Int                    @id @default(autoincrement())
+  clubId        Int                    @map("club_id")
+  playerId      Int                    @map("player_id")
+  requestedDate DateTime               @map("requested_date")
+  startTime     String                 @map("start_time")
+  endTime       String?                @map("end_time")
+  location      String?
+  notes         String?                @db.Text
+  status        TrainingRequestStatus  @default(PENDING)
+  reviewedById  Int?                   @map("reviewed_by_id")
+  reviewedAt    DateTime?              @map("reviewed_at")
+  reviewNote    String?                @map("review_note") @db.Text
+  createdAt     DateTime               @default(now()) @map("created_at")
+
+  club       Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player     Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy User?  @relation("TrainingRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([clubId, requestedDate])
+  @@index([playerId])
+  @@map("training_requests")
 }
 
 // ---------------------------------------------------------------------------
