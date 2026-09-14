@@ -81,9 +81,12 @@ const METRIC_LABELS: Record<string, string> = {
   "5-10-5": "Agilidad 5-10-5 (s)",
   Illinois: "Agilidad Illinois (s)",
   "Salto vertical": "Salto vertical (cm)",
+  SJ: "SJ - Squat Jump (cm)",
   CMJ: "CMJ (cm)",
+  SC: "SC - Saltos Continuos (cm)",
   "Yo-Yo": "Resistencia Yo-Yo (m)",
   "30-15 VIFT": "30-15 VIFT (km/h)",
+  "Course Navette": "Course Navette (nivel)",
 };
 
 /** Perfil de rendimiento de un jugador (punto 16): evolucion de metricas, carga/RPE, semaforo y asistencia. */
