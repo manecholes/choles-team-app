@@ -68,6 +68,7 @@ model Club {
   settings      Setting[]
   auditLogs     AuditLog[]
   trainingRequests TrainingRequest[]
+  whatsappPaymentReviews WhatsAppPaymentReview[]
 
   @@map("clubs")
 }
@@ -220,6 +221,7 @@ model Guardian {
   club    Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
   user    User?
   players PlayerGuardian[]
+  whatsappPaymentReviews WhatsAppPaymentReview[]
 
   @@index([clubId])
   @@map("guardians")
@@ -318,6 +320,7 @@ model Player {
   performanceMetrics PerformanceMetric[]
   documents       Document[]
   trainingRequests TrainingRequest[]
+  whatsappPaymentReviews WhatsAppPaymentReview[]
 
   @@index([clubId])
   @@index([categoryId])
@@ -752,10 +755,50 @@ model Payment {
   concept      PaymentConcept  @relation(fields: [conceptId], references: [id], onDelete: Restrict)
   registeredBy User?           @relation("PaymentRegisteredBy", fields: [registeredById], references: [id], onDelete: SetNull)
   receipt      Receipt?
+  whatsappReview WhatsAppPaymentReview?
 
   @@index([clubId, status])
   @@index([playerId])
   @@map("payments")
+}
+
+enum WhatsAppReviewStatus {
+  PENDING_ADMIN
+  CONFIRMED
+  REJECTED
+  EXPIRED
+}
+
+/**
+ * Comprobante de pago (captura de transferencia) recibido por el bot de
+ * WhatsApp (punto 12/30 del maestro). El bot reenvia la imagen al
+ * administrador del club, quien confirma respondiendo directamente a ese
+ * mensaje de WhatsApp si es valida y a que mes corresponde. Solo entonces
+ * se crea el Payment real -- el bot nunca registra un pago por su cuenta.
+ */
+model WhatsAppPaymentReview {
+  id             Int                  @id @default(autoincrement())
+  clubId         Int                  @map("club_id")
+  fromPhone      String               @map("from_phone")
+  guardianId     Int?                 @map("guardian_id")
+  playerId       Int?                 @map("player_id")
+  mediaId        String               @map("media_id")
+  imagePath      String?              @map("image_path")
+  aiSummary      String?              @map("ai_summary") @db.Text
+  status         WhatsAppReviewStatus @default(PENDING_ADMIN)
+  adminMessageId String?              @map("admin_message_id")
+  paymentId      Int?                 @unique @map("payment_id")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  resolvedAt     DateTime?            @map("resolved_at")
+
+  club     Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  guardian Guardian? @relation(fields: [guardianId], references: [id], onDelete: SetNull)
+  player   Player?   @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  payment  Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([clubId, status])
+  @@index([adminMessageId])
+  @@map("whatsapp_payment_reviews")
 }
 
 model Receipt {
