@@ -530,14 +530,12 @@ enum TrainingRequestStatus {
   REJECTED
 }
 
-/**
- * Solicitud de entrenamiento individual hecha por el propio jugador: el
- * jugador propone fecha/hora/lugar de una practica extra por su cuenta
- * (tecnica, tiro, etc.). No reemplaza ni afecta la asistencia de los
- * entrenamientos oficiales del equipo (TrainingSession) -- es un flujo
- * aparte, siempre visible para el jugador y sus padres/tutores. Queda en
- * PENDING hasta que su entrenador o un administrador la aprueba o rechaza.
- */
+/// Solicitud de entrenamiento individual hecha por el propio jugador: el
+/// jugador propone fecha/hora/lugar de una practica extra por su cuenta
+/// (tecnica, tiro, etc.). No reemplaza ni afecta la asistencia de los
+/// entrenamientos oficiales del equipo (TrainingSession) -- es un flujo
+/// aparte, siempre visible para el jugador y sus padres/tutores. Queda en
+/// PENDING hasta que su entrenador o un administrador la aprueba o rechaza.
 model TrainingRequest {
   id            Int                    @id @default(autoincrement())
   clubId        Int                    @map("club_id")
@@ -769,13 +767,11 @@ enum WhatsAppReviewStatus {
   EXPIRED
 }
 
-/**
- * Comprobante de pago (captura de transferencia) recibido por el bot de
- * WhatsApp (punto 12/30 del maestro). El bot reenvia la imagen al
- * administrador del club, quien confirma respondiendo directamente a ese
- * mensaje de WhatsApp si es valida y a que mes corresponde. Solo entonces
- * se crea el Payment real -- el bot nunca registra un pago por su cuenta.
- */
+/// Comprobante de pago (captura de transferencia) recibido por el bot de
+/// WhatsApp (punto 12/30 del maestro). El bot reenvia la imagen al
+/// administrador del club, quien confirma respondiendo directamente a ese
+/// mensaje de WhatsApp si es valida y a que mes corresponde. Solo entonces
+/// se crea el Payment real -- el bot nunca registra un pago por su cuenta.
 model WhatsAppPaymentReview {
   id             Int                  @id @default(autoincrement())
   clubId         Int                  @map("club_id")
