@@ -10,7 +10,16 @@ import { jwtVerify } from "jose";
  * falta).
  */
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/refresh"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/refresh",
+  // Webhook oficial de WhatsApp Business (Meta) -- lo llama Meta directamente,
+  // sin sesion de usuario, asi que no puede exigir el access_token del login.
+  // La unica proteccion de esta ruta es el WHATSAPP_VERIFY_TOKEN (ver
+  // src/app/api/whatsapp/webhook/route.ts).
+  "/api/whatsapp/webhook",
+];
 
 function isPublic(pathname: string) {
   return (
