@@ -70,7 +70,12 @@ export async function listPayments(
   }));
 }
 
-export async function createPayment(clubId: number, registeredById: number, data: PaymentInput) {
+/**
+ * registeredById puede ser null cuando el pago lo crea el bot de WhatsApp
+ * (punto 30 del maestro) sin poder identificar con certeza a que usuario
+ * ADMIN atribuirselo -- el pago igual queda registrado, solo sin "creado por".
+ */
+export async function createPayment(clubId: number, registeredById: number | null, data: PaymentInput) {
   await prisma.player.findFirstOrThrow({ where: { id: data.playerId, clubId } });
   const receiptNumber = await nextReceiptNumber(clubId);
   const amountPaid = resolveAmountPaid(data.status, data.amount, data.amountPaid);
