@@ -5,7 +5,7 @@ import { jwtVerify } from "jose";
  * Protege las rutas de la app (todo lo que no sea /login ni /api/auth/*).
  * Corre en el runtime Edge, por eso usa `jose` (compatible con Web Crypto)
  * en vez de `jsonwebtoken`. Solo valida firma/expiracion del access token;
- * la resolucion fina de permisos por rol se hace en cada pagina/ruta API
+ * la resolucion fina de     permisos por rol se hace en cada pagina/ruta API
  * (que si corren en Node.js y pueden consultar la base de datos si hace
  * falta).
  */
