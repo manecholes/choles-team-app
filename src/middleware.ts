@@ -19,6 +19,9 @@ const PUBLIC_PATHS = [
   // La unica proteccion de esta ruta es el WHATSAPP_VERIFY_TOKEN (ver
   // src/app/api/whatsapp/webhook/route.ts).
   "/api/whatsapp/webhook",
+  // Politica de privacidad publica -- requerida por Meta para publicar la
+  // app de WhatsApp Business Platform (debe ser accesible sin sesion).
+  "/privacidad",
 ];
 
 function isPublic(pathname: string) {
