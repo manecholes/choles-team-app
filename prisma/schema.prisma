@@ -69,6 +69,9 @@ model Club {
   auditLogs     AuditLog[]
   trainingRequests TrainingRequest[]
   whatsappPaymentReviews WhatsAppPaymentReview[]
+  galleryImages GalleryImage[]
+  clubEvents    ClubEvent[]
+  products      Product[]
 
   @@map("clubs")
 }
@@ -994,4 +997,71 @@ model Document {
 
   @@index([playerId])
   @@map("documents")
+}
+
+
+// ---------------------------------------------------------------------------
+// Sitio publico (galeria, eventos, tienda-catalogo)
+// ---------------------------------------------------------------------------
+
+model GalleryImage {
+  id            Int      @id @default(autoincrement())
+  clubId        Int      @map("club_id")
+  title         String
+  description   String?  @db.Text
+  imagePath     String?  @map("image_path")
+  imageMimeType String?  @map("image_mime_type")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
+  @@map("gallery_images")
+}
+
+model ClubEvent {
+  id            Int      @id @default(autoincrement())
+  clubId        Int      @map("club_id")
+  title         String
+  description   String?  @db.Text
+  date          DateTime
+  timeLabel     String?  @map("time_label")
+  location      String?
+  imagePath     String?  @map("image_path")
+  imageMimeType String?  @map("image_mime_type")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, date])
+  @@map("club_events")
+}
+
+enum ProductCategory {
+  UNIFORME
+  BALON
+  ZAPATO
+  CAMISETA
+  GORRA
+  OTRO
+}
+
+model Product {
+  id            Int             @id @default(autoincrement())
+  clubId        Int             @map("club_id")
+  name          String
+  description   String?         @db.Text
+  price         Decimal?        @db.Decimal(10, 2)
+  category      ProductCategory
+  imagePath     String?         @map("image_path")
+  imageMimeType String?         @map("image_mime_type")
+  available     Boolean         @default(true)
+  sortOrder     Int             @default(0) @map("sort_order")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
+  @@map("products")
 }
