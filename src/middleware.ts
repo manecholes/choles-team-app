@@ -11,6 +11,10 @@ import { jwtVerify } from "jose";
  */
 
 const PUBLIC_PATHS = [
+    // Landing page publica (cholesteam.com); si ya hay sesion, page.tsx
+    // redirige a /dashboard, pero primero debe poder cargar sin ser
+    // interceptada por este middleware.
+    "/",
   "/login",
   "/api/auth/login",
   "/api/auth/refresh",
