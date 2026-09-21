@@ -62,6 +62,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "settings:write",
     "training_requests:read",
     "training_requests:review",
+    "gallery:read",
+    "gallery:write",
+    "gallery:delete",
+    "club_events:read",
+    "club_events:write",
+    "club_events:delete",
+    "products:read",
+    "products:write",
+    "products:delete",
   ],
 
   COACH: [
@@ -176,6 +185,9 @@ export const NAV_ITEMS: Array<{
   { href: "/reportes", label: "Reportes", icon: "FileBarChart", resource: "reports" },
   { href: "/documentos", label: "Documentos", icon: "Folder", resource: "documents" },
   { href: "/configuracion", label: "Configuracion", icon: "Settings", resource: "settings" },
+  { href: "/sitio-web/galeria", label: "Galeria (sitio web)", icon: "Image", resource: "gallery" },
+  { href: "/sitio-web/eventos", label: "Eventos (sitio web)", icon: "CalendarDays", resource: "club_events" },
+  { href: "/sitio-web/tienda", label: "Tienda (sitio web)", icon: "Store", resource: "products" },
 ];
 
 /** Decide si un item del sidebar se muestra para este rol (ver comentario de `permission` arriba). */
