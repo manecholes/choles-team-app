@@ -4,6 +4,11 @@ import { PublicFooter } from "@/components/PublicFooter";
 import { listPublicProducts } from "@/server/services/product.service";
 import { buildMailtoLink, buildWhatsAppLink } from "@/lib/site-contact";
 
+// Se accede a la base de datos en cada visita; evita que Next intente
+// pre-renderizarla estaticamente durante el build (donde la DB no es
+// alcanzable), lo que rompia el despliegue en Railway.
+export const dynamic = "force-dynamic";
+
 const CATEGORY_LABEL: Record<string, string> = {
   UNIFORME: "Uniformes",
   BALON: "Balones",
