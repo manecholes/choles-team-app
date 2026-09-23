@@ -2,6 +2,11 @@ import { CalendarDays, MapPin } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { listPublicClubEvents } from "@/server/services/clubEvent.service";
+
+// Se accede a la base de datos en cada visita; evita que Next intente
+// pre-renderizarla estaticamente durante el build (donde la DB no es
+// alcanzable), lo que rompia el despliegue en Railway.
+export const dynamic = "force-dynamic";
 import { formatDateCO } from "@/lib/date-format";
 
 function EventCard({
