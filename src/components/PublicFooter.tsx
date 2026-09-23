@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { buildMailtoLink, buildWhatsAppLink } from "@/lib/site-contact";
+import { buildMailtoLink, buildWhatsAppLink, CLUB_EMAIL } from "@/lib/site-contact";
 
 export function PublicFooter() {
   return (
@@ -17,7 +17,7 @@ export function PublicFooter() {
             WhatsApp
           </a>
           <a href={buildMailtoLink()} className="underline hover:text-white">
-            {"contacto@cholesteam.com"}
+            {CLUB_EMAIL}
           </a>
         </div>
       </div>
