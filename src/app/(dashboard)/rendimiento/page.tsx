@@ -24,6 +24,8 @@ interface TestRow {
   unit: string;
   /** Solo para TECHNICAL: aciertos de 10 lanzamientos/repeticiones, antes de convertir a puntaje 1-5. */
   makes?: string;
+  /** true si el valor se calcula automaticamente (IE, RSI-mod) y no debe editarse a mano. */
+  computed?: boolean;
 }
 
 const TEST_CATALOG: Record<string, Array<{ testName: string; unit: string }>> = {
@@ -46,8 +48,7 @@ const TEST_CATALOG: Record<string, Array<{ testName: string; unit: string }>> = 
     { testName: "SJ", unit: "cm" },
     { testName: "CMJ", unit: "cm" },
     { testName: "SC", unit: "cm" },
-    { testName: "RSI", unit: "indice" },
-    { testName: "IE", unit: "%" },
+    { testName: "Tiempo de impulso CMJ", unit: "s" },
   ],
   ENDURANCE: [
     { testName: "Yo-Yo", unit: "m" },
@@ -100,6 +101,24 @@ function scoreFromMakes(makes: number): number {
   if (makes <= 6) return 3;
   if (makes <= 8) return 4;
   return 5;
+}
+
+/** IE (Indice de Elasticidad): aporte del contramovimiento, a partir de SJ y CMJ (cm). */
+function computeIE(sj: number, cmj: number): number {
+  return ((cmj - sj) / sj) * 100;
+}
+
+/** RSI-mod del CMJ: altura del salto (m) dividida por el tiempo de impulso (s). cmjCm en centimetros. */
+function computeRsiMod(cmjCm: number, impulseTimeS: number): number {
+  return cmjCm / 100 / impulseTimeS;
+}
+
+/** Interpretacion orientativa del RSI-mod (ver nota: comparar cada jugador con su propio historico). */
+function rsiModLevel(rsi: number): { label: string; className: string } {
+  if (rsi < 0.8) return { label: "Bajo", className: "text-choles-red" };
+  if (rsi < 1.2) return { label: "Moderado", className: "text-yellow-600" };
+  if (rsi < 1.6) return { label: "Bueno", className: "text-turqui-600" };
+  return { label: "Alto", className: "text-green-600" };
 }
 
 const emptyLoadForm = { rpe: "7", durationMinutes: "60" };
@@ -170,6 +189,34 @@ export default function RendimientoPage() {
   useEffect(() => {
     if (selectedPlayerId) loadProfile(selectedPlayerId);
   }, [selectedPlayerId]);
+
+  /** Calcula IE y RSI-mod automaticamente a partir de SJ, CMJ y el tiempo de impulso del CMJ. */
+  useEffect(() => {
+    const sj = Number(testRows.find((r) => r.testName === "SJ")?.value || "");
+    const cmj = Number(testRows.find((r) => r.testName === "CMJ")?.value || "");
+    const impulse = Number(testRows.find((r) => r.testName === "Tiempo de impulso CMJ")?.value || "");
+
+    const ie = sj > 0 && cmj > 0 ? computeIE(sj, cmj) : null;
+    const rsi = cmj > 0 && impulse > 0 ? computeRsiMod(cmj, impulse) : null;
+
+    const currentIe = testRows.find((r) => r.testName === "IE")?.value ?? null;
+    const currentRsi = testRows.find((r) => r.testName === "RSI")?.value ?? null;
+    const nextIe = ie !== null ? ie.toFixed(2) : null;
+    const nextRsi = rsi !== null ? rsi.toFixed(2) : null;
+
+    if (currentIe === nextIe && currentRsi === nextRsi) return;
+
+    setTestRows((rows) => {
+      let next = rows.filter((r) => r.testName !== "IE" && r.testName !== "RSI");
+      if (nextIe !== null) {
+        next = [...next, { category: "JUMP", testName: "IE", value: nextIe, unit: "%", computed: true }];
+      }
+      if (nextRsi !== null) {
+        next = [...next, { category: "JUMP", testName: "RSI", value: nextRsi, unit: "m/s", computed: true }];
+      }
+      return next;
+    });
+  }, [testRows]);
 
   function addTestRow(category: string, testName: string, unit: string) {
     if (testRows.some((t) => t.testName === testName)) return;
@@ -327,6 +374,11 @@ export default function RendimientoPage() {
                           );
                         })}
                       </div>
+                      {category === "JUMP" && (
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          IE y RSI-mod se calculan automaticamente (IE a partir de SJ/CMJ, RSI-mod a partir de CMJ y Tiempo de impulso CMJ).
+                        </p>
+                      )}
                     </div>
                   ))}
 
@@ -336,7 +388,21 @@ export default function RendimientoPage() {
                         <div key={t.testName} className="flex items-center gap-2">
                           <span className="w-28 shrink-0 text-xs text-slate-500">{t.testName}</span>
 
-                          {t.makes !== undefined ? (
+                          {t.computed ? (
+                            // IE y RSI-mod: valores calculados automaticamente, no editables.
+                            <>
+                              <span className="input flex items-center bg-slate-50 text-slate-600">
+                                {t.value} {t.unit}
+                              </span>
+                              {t.testName === "RSI" && t.value && (
+                                <span
+                                  className={`w-24 shrink-0 text-center text-xs font-semibold ${rsiModLevel(Number(t.value)).className}`}
+                                >
+                                  {rsiModLevel(Number(t.value)).label}
+                                </span>
+                              )}
+                            </>
+                          ) : t.makes !== undefined ? (
                             // Pruebas tecnicas: se registran los aciertos de 10 lanzamientos/repeticiones
                             // y la app calcula sola el puntaje de 1 a 5 (ver scoreFromMakes).
                             <>
@@ -373,9 +439,11 @@ export default function RendimientoPage() {
                             />
                           )}
 
-                          <button type="button" className="btn-ghost text-choles-red" onClick={() => removeTestRow(t.testName)}>
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {!t.computed && (
+                            <button type="button" className="btn-ghost text-choles-red" onClick={() => removeTestRow(t.testName)}>
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
