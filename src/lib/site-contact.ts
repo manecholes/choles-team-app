@@ -4,7 +4,7 @@
  * producto). Numero de WhatsApp: el mismo que ya usa el bot del club.
  */
 export const CLUB_WHATSAPP_NUMBER = "573246384445";
-export const CLUB_EMAIL = "contacto@cholesteam.com";
+export const CLUB_EMAIL = "cholesteambc@gmail.com";
 
 export function buildWhatsAppLink(message?: string) {
   const base = `https://wa.me/${CLUB_WHATSAPP_NUMBER}`;
