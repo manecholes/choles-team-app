@@ -84,6 +84,8 @@ const METRIC_LABELS: Record<string, string> = {
   SJ: "SJ - Squat Jump (cm)",
   CMJ: "CMJ (cm)",
   SC: "SC - Saltos Continuos (cm)",
+  RSI: "RSI - Indice de Fuerza Reactiva",
+  IE: "IE - Indice de Elasticidad (%)",
   "Yo-Yo": "Resistencia Yo-Yo (m)",
   "30-15 VIFT": "30-15 VIFT (km/h)",
   "Course Navette": "Course Navette (nivel)",
