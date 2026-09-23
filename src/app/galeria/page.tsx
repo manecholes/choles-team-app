@@ -3,6 +3,11 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { listPublicGalleryImages } from "@/server/services/gallery.service";
 
+// Se accede a la base de datos en cada visita; evita que Next intente
+// pre-renderizarla estaticamente durante el build (donde la DB no es
+// alcanzable), lo que rompia el despliegue en Railway.
+export const dynamic = "force-dynamic";
+
 /** Pagina publica: Galeria de fotos del club (sin sesion). */
 export default async function GaleriaPage() {
   const images = await listPublicGalleryImages();
