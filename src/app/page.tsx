@@ -2,6 +2,8 @@ import * as React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { PublicHeader } from "@/components/PublicHeader";
+import { PublicFooter } from "@/components/PublicFooter";
 
 const h = React.createElement;
 
@@ -65,23 +67,7 @@ export default async function HomePage() {
   return h(
         "main",
     { className: "min-h-screen bg-slate-50" },
-        h(
-                "header",
-          { className: "sticky top-0 z-10 bg-turqui-700 text-white" },
-                h(
-                          "div",
-                  {
-                              className:
-                                            "max-w-6xl mx-auto px-6 py-4 flex items-center justify-between",
-                  },
-                          h(
-                                      "span",
-                            { className: "font-bold text-lg tracking-wide" },
-                                      "Choles Team"
-                                    ),
-                          h(Link, { href: "/login", className: "btn-secondary" }, "Iniciar sesion")
-                        )
-              ),
+        h(PublicHeader),
         h(
                 "section",
           { className: "bg-turqui-700 text-white" },
@@ -234,34 +220,6 @@ export default async function HomePage() {
                                     )
                         )
               ),
-        h(
-                "footer",
-          { className: "bg-turqui-800 text-turqui-100" },
-                h(
-                          "div",
-                  {
-                              className:
-                                            "max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm",
-                  },
-                          h("p", null, "Choles Team -- \"Juntos, somos Choles Team.\""),
-                          h(
-                                      "div",
-                            { className: "flex gap-5" },
-                                      h(
-                                                    Link,
-                                        { href: "/privacidad", className: "hover:text-white underline" },
-                                                    "Politica de privacidad"
-                                                  ),
-                                      h(
-                                                    "a",
-                                        {
-                                                        href: "mailto:contacto@cholesteam.com",
-                                                        className: "hover:text-white underline",
-                                        },
-                                                    "contacto@cholesteam.com"
-                                                  )
-                                    )
-                        )
-              )
+        h(PublicFooter)
       );
 }
