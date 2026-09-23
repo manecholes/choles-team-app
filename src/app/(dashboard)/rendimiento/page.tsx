@@ -46,6 +46,8 @@ const TEST_CATALOG: Record<string, Array<{ testName: string; unit: string }>> = 
     { testName: "SJ", unit: "cm" },
     { testName: "CMJ", unit: "cm" },
     { testName: "SC", unit: "cm" },
+    { testName: "RSI", unit: "indice" },
+    { testName: "IE", unit: "%" },
   ],
   ENDURANCE: [
     { testName: "Yo-Yo", unit: "m" },
