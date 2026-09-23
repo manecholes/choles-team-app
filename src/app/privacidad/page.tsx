@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CLUB_EMAIL } from "@/lib/site-contact";
 
 export const metadata: Metadata = {
   title: "Politica de Privacidad | Choles Team",
@@ -59,10 +60,10 @@ export default function PrivacidadPage() {
             cualquier consulta relacionada con esta politica o con tus
             datos, puedes escribir a{" "}
             <a
-              href="mailto:contacto@cholesteam.com"
+              href={`mailto:${CLUB_EMAIL}`}
               className="text-turqui-600 underline"
             >
-              contacto@cholesteam.com
+              {CLUB_EMAIL}
             </a>
             .
           </p>
@@ -181,10 +182,10 @@ export default function PrivacidadPage() {
             (o los de tu hijo o hija, si eres su padre, madre o tutor),
             escribiendo a{" "}
             <a
-              href="mailto:contacto@cholesteam.com"
+              href={`mailto:${CLUB_EMAIL}`}
               className="text-turqui-600 underline"
             >
-              contacto@cholesteam.com
+              {CLUB_EMAIL}
             </a>
             . Atenderemos tu solicitud dentro de un plazo razonable.
           </p>
