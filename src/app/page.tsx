@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
+import { CLUB_EMAIL } from "@/lib/site-contact";
 
 const h = React.createElement;
 
@@ -210,10 +211,10 @@ export default async function HomePage() {
                                                     h(
                                                                     "a",
                                                       {
-                                                                        href: "mailto:contacto@cholesteam.com",
+                                                                        href: `mailto:${CLUB_EMAIL}`,
                                                                         className: "text-turqui-600 underline",
                                                       },
-                                                                    "contacto@cholesteam.com"
+                                                                    CLUB_EMAIL
                                                                   ),
                                                     "."
                                                   )
