@@ -26,14 +26,34 @@ const PUBLIC_PATHS = [
   // Politica de privacidad publica -- requerida por Meta para publicar la
   // app de WhatsApp Business Platform (debe ser accesible sin sesion).
   "/privacidad",
+  // Paginas publicas del sitio (punto: expansion web publica sin sesion).
+  "/mision-vision",
+  "/galeria",
+  "/eventos",
+  "/tienda",
+  "/contacto",
 ];
+
+// Endpoints de imagen publica de galeria/eventos/tienda (servidas sin sesion
+// en las paginas publicas correspondientes); usan [id] dinamico, por eso no
+// pueden listarse como string exacto en PUBLIC_PATHS.
+const PUBLIC_API_MEDIA_PATTERNS = [
+  /^\/api\/gallery\/\d+\/image$/,
+  /^\/api\/events\/\d+\/image$/,
+  /^\/api\/products\/\d+\/image$/,
+];
+
+function isPublicApiMedia(pathname: string) {
+  return PUBLIC_API_MEDIA_PATTERNS.some((re) => re.test(pathname));
+}
 
 function isPublic(pathname: string) {
   return (
     PUBLIC_PATHS.some((p) => pathname === p) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.startsWith("/public")
+    pathname.startsWith("/public") ||
+    isPublicApiMedia(pathname)
   );
 }
 
