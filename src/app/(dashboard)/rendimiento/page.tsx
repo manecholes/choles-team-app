@@ -77,7 +77,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   ANTHROPOMETRY: "Antropometria",
   SPEED: "Velocidad",
   AGILITY: "Agilidad",
-  JUMP: "Salto",
+  JUMP: "Protocolo de perfil neuromuscular",
   ENDURANCE: "Resistencia",
   STRENGTH: "Fuerza",
   TECHNICAL: "Test tecnico",
