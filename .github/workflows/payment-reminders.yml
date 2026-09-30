@@ -1,0 +1,49 @@
+# Recordatorios de mensualidad por WhatsApp - Choles Team
+#
+# Solo 2 envios al mes, a las 6:00 p.m. hora Colombia (23:00 UTC):
+#   - dia 30 -> recordatorio sutil de la mensualidad del mes siguiente
+#               (en febrero sale el 28 o 29, porque no tiene dia 30)
+#   - dia 5  -> aviso de pago vencido (solo a quien no ha pagado)
+# Los dias 28 y 29 solo se activa para cubrir febrero; en los demas meses
+# la app revisa la fecha y no envia nada esos dias.
+#
+# Necesita 2 "secrets" en GitHub (Settings > Secrets and variables > Actions):
+#   APP_URL     = https://cholesteam.com
+#   CRON_SECRET = el mismo valor que la variable CRON_SECRET de Railway
+#
+# Tambien se puede correr a mano (pestana Actions > "Recordatorios de pago"
+# > Run workflow) para hacer una PRUEBA sin enviar nada (dry_run = true).
+
+name: Recordatorios de pago
+
+on:
+  schedule:
+    - cron: "0 23 5,28,29,30 * *"
+  workflow_dispatch:
+    inputs:
+      type:
+        description: "auto, reminder (dia 30) u overdue (dia 5)"
+        required: true
+        default: "auto"
+      dry_run:
+        description: "true = solo mostrar a quien le llegaria, sin enviar"
+        required: true
+        default: "true"
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar a la app
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TYPE: ${{ github.event.inputs.type || 'auto' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          DRY=0
+          if [ "$DRY_RUN" = "true" ]; then DRY=1; fi
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/payment-reminders?type=$TYPE&dryRun=$DRY"
+          echo
