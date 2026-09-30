@@ -23,6 +23,10 @@ const PUBLIC_PATHS = [
   // La unica proteccion de esta ruta es el WHATSAPP_VERIFY_TOKEN (ver
   // src/app/api/whatsapp/webhook/route.ts).
   "/api/whatsapp/webhook",
+  // Recordatorios de mensualidad por WhatsApp -- lo llama la tarea
+  // programada de GitHub Actions (sin sesion). Se protege con CRON_SECRET
+  // (ver src/app/api/cron/payment-reminders/route.ts).
+  "/api/cron/payment-reminders",
   // Politica de privacidad publica -- requerida por Meta para publicar la
   // app de WhatsApp Business Platform (debe ser accesible sin sesion).
   "/privacidad",
