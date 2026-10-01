@@ -20,10 +20,12 @@ import {
  * aprobadas por Meta (obligatorio para escribirle a alguien que no le ha
  * escrito al club en las ultimas 24 horas).
  *
- * Plantillas (categoria "Utilidad", idioma Espanol), 4 variables en orden:
- *   {{1}} nombre del acudiente, {{2}} mes, {{3}} jugador(es), {{4}} valor
- * - WHATSAPP_TEMPLATE_REMINDER (por defecto "recordatorio_pago") -> dia 30 (febrero: su ultimo dia)
- * - WHATSAPP_TEMPLATE_OVERDUE  (por defecto "pago_vencido")      -> dia 5
+ * Plantillas (categoria "Utilidad", idioma Espanol), 3 variables en orden:
+ *   {{1}} nombre del acudiente, {{2}} mes, {{3}} jugador(es)
+ * El valor NO se envia (cada familia sabe cuanto debe: hay hermanos y becados);
+ * los medios de pago (Nequi / Daviplata / efectivo) van fijos en la plantilla.
+ * - WHATSAPP_TEMPLATE_REMINDER (por defecto "recordatorio_pago_v2") -> dia 30 (febrero: su ultimo dia)
+ * - WHATSAPP_TEMPLATE_OVERDUE  (por defecto "pago_vencido_v2")      -> dia 5
  * - WHATSAPP_TEMPLATE_LANG     (por defecto "es")
  *
  * Reglas:
@@ -62,8 +64,8 @@ function templateConfig(type: ReminderType) {
   return {
     name:
       type === "REMINDER"
-        ? process.env.WHATSAPP_TEMPLATE_REMINDER || "recordatorio_pago"
-        : process.env.WHATSAPP_TEMPLATE_OVERDUE || "pago_vencido",
+        ? process.env.WHATSAPP_TEMPLATE_REMINDER || "recordatorio_pago_v2"
+        : process.env.WHATSAPP_TEMPLATE_OVERDUE || "pago_vencido_v2",
     language: process.env.WHATSAPP_TEMPLATE_LANG || "es",
   };
 }
@@ -226,7 +228,7 @@ export async function runPaymentReminders(opts: RunRemindersOptions = {}) {
       continue;
     }
     try {
-      const wamid = await sendTemplate(r.phone, type, [r.guardianName || "familia", monthName, players, total]);
+      const wamid = await sendTemplate(r.phone, type, [r.guardianName || "familia", monthName, players]);
       await prisma.auditLog.createMany({
         data: r.paymentIds.map((id) => ({
           clubId: club.id,
