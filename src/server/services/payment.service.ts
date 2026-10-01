@@ -34,9 +34,32 @@ export async function updatePaymentConcept(clubId: number, id: number, data: Con
   });
 }
 
-async function nextReceiptNumber(clubId: number): Promise<string> {
-  const count = await prisma.payment.count({ where: { clubId } });
-  return `REC-${String(count + 1).padStart(6, "0")}`;
+/**
+ * Numero mas alto de recibo "REC-000123" que ya existe (en toda la base, porque
+ * receipt_number es unico global). Antes se usaba "cantidad de pagos + 1", pero
+ * eso choca con un numero ya usado en cuanto se borra algun pago (error
+ * "Unique constraint failed on payments_receipt_number_key").
+ */
+async function highestReceiptSeq(): Promise<number> {
+  const rows = await prisma.payment.findMany({
+    where: { receiptNumber: { startsWith: "REC-" } },
+    select: { receiptNumber: true },
+  });
+  let max = 0;
+  for (const r of rows) {
+    const n = Number(r.receiptNumber.slice(4));
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return max;
+}
+
+function formatReceiptNumber(seq: number): string {
+  return `REC-${String(seq).padStart(6, "0")}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function nextReceiptNumber(_clubId: number): Promise<string> {
+  return formatReceiptNumber((await highestReceiptSeq()) + 1);
 }
 
 export async function listPayments(
@@ -209,7 +232,7 @@ export async function generateMonthlyCharges(
     return { created: 0, periodLabel, concept };
   }
 
-  const count = await prisma.payment.count({ where: { clubId } });
+  const lastSeq = await highestReceiptSeq();
   const payments = toCreate.map((p, i) => ({
     clubId,
     playerId: p.id,
@@ -220,7 +243,7 @@ export async function generateMonthlyCharges(
     periodLabel,
     status: "PENDING" as const,
     registeredById,
-    receiptNumber: `REC-${String(count + i + 1).padStart(6, "0")}`,
+    receiptNumber: formatReceiptNumber(lastSeq + i + 1),
   }));
 
   await prisma.payment.createMany({ data: payments });
