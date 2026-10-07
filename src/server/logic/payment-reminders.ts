@@ -96,11 +96,15 @@ export function formatCOP(value: number): string {
  * Devuelve null si el numero no parece valido.
  */
 export function toWhatsAppNumber(phone: string | null | undefined): string | null {
-  let digits = (phone || "").replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.length === 10 && digits.startsWith("3")) digits = `57${digits}`;
-  if (digits.length < 11 || digits.length > 15) return null;
-  return digits;
+  // Algunos registros traen dos numeros en el mismo campo
+  // (ej. "3008081594 / 3176209999"): se usa el primero que sea valido.
+  for (const part of (phone || "").split(/[\/,;|]|\s+(?:y|o)\s+/i)) {
+    let digits = part.replace(/\D/g, "");
+    if (digits.startsWith("00")) digits = digits.slice(2);
+    if (digits.length === 10 && digits.startsWith("3")) digits = `57${digits}`;
+    if (digits.length >= 11 && digits.length <= 15) return digits;
+  }
+  return null;
 }
 
 /** ["Juliana", "Rafaela", "Ana"] -> "Juliana, Rafaela y Ana" (hermanos en un solo mensaje). */
