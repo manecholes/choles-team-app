@@ -145,9 +145,10 @@ export async function runPaymentReminders(opts: RunRemindersOptions = {}) {
     where: { slug: process.env.WHATSAPP_CLUB_SLUG || "choles-team" },
   });
 
-  // El dia 30 los cargos del mes siguiente todavia no existen (se crean al
-  // entrar a /pagos), asi que se generan aqui. Nunca duplica cargos.
-  if (type === "REMINDER" && !dryRun) {
+  // Los cargos del mes pueden no existir todavia (solo se crean al entrar a
+  // /pagos): el dia 30 los del mes siguiente, y el dia 5 los del mes actual si
+  // nadie abrio /pagos. Se generan aqui en ambos casos. Nunca duplica cargos.
+  if (!dryRun) {
     const admin = await prisma.user.findFirst({
       where: { clubId: club.id, role: "ADMIN", active: true },
       orderBy: { id: "asc" },
@@ -168,6 +169,7 @@ export async function runPaymentReminders(opts: RunRemindersOptions = {}) {
         select: {
           firstName: true,
           lastName: true,
+          phone: true,
           guardians: {
             orderBy: { isPrimaryContact: "desc" },
             select: { guardian: { select: { firstName: true, phone: true } } },
@@ -195,10 +197,13 @@ export async function runPaymentReminders(opts: RunRemindersOptions = {}) {
       continue;
     }
     const playerFullName = `${p.player.firstName} ${p.player.lastName}`.trim();
-    // Primer acudiente con un celular valido (el contacto principal va primero).
-    const contact = p.player.guardians
-      .map((g) => ({ name: g.guardian.firstName, phone: toWhatsAppNumber(g.guardian.phone) }))
-      .find((g) => g.phone);
+    // Primer acudiente con un celular valido (el contacto principal va primero);
+    // si ningun acudiente tiene celular, se usa el celular registrado del jugador.
+    const contact =
+      p.player.guardians
+        .map((g) => ({ name: g.guardian.firstName, phone: toWhatsAppNumber(g.guardian.phone) }))
+        .find((g) => g.phone) ??
+      (toWhatsAppNumber(p.player.phone) ? { name: "", phone: toWhatsAppNumber(p.player.phone) } : undefined);
     if (!contact?.phone) {
       withoutPhone.push(playerFullName);
       continue;
