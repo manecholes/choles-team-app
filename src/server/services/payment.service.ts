@@ -57,7 +57,6 @@ function formatReceiptNumber(seq: number): string {
   return `REC-${String(seq).padStart(6, "0")}`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function nextReceiptNumber(_clubId: number): Promise<string> {
   return formatReceiptNumber((await highestReceiptSeq()) + 1);
 }
