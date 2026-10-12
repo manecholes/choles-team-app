@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { assertAnyPermission, handleApiError, resolveClubScope } from "@/lib/api-utils";
+import { assertAnyPermission, assertPermission, handleApiError, jsonOk, resolveClubScope } from "@/lib/api-utils";
+import { sendReceiptWhatsApp } from "@/server/services/receipt-whatsapp.service";
 import { ForbiddenError } from "@/lib/auth";
 import { getGuardianChildrenIds } from "@/lib/scope";
 import { getPaymentWithDetails } from "@/server/services/payment.service";
@@ -49,6 +50,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         "Content-Disposition": `inline; filename="recibo-${payment.receiptNumber}.pdf"`,
       },
     });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+/**
+ * Envia el recibo de este pago por WhatsApp al acudiente.
+ * - Sin parametros: se usa justo despues de marcar un pago como PAGADO (nunca envia dos veces el mismo recibo).
+ * - ?force=1: reenvio manual (boton "Reenviar por WhatsApp").
+ */
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const user = await requireUser(req);
+    assertPermission(user, "payments:write");
+    const clubId = resolveClubScope(user);
+    if (!clubId) throw new Error("Club no resuelto");
+    const force = new URL(req.url).searchParams.get("force") === "1";
+    const whatsapp = await sendReceiptWhatsApp(clubId, Number(params.id), { userId: user.userId, force });
+    return jsonOk({ whatsapp });
   } catch (err) {
     return handleApiError(err);
   }
