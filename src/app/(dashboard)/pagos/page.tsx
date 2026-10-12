@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Download, CheckCircle2, Trash2, Settings, Pencil, RefreshCw, Search, ArrowLeft, Users, List } from "lucide-react";
+import { Plus, Download, CheckCircle2, Trash2, Settings, Pencil, RefreshCw, Search, ArrowLeft, Users, List, MessageCircle } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Badge, statusBadge } from "@/components/Badge";
@@ -122,6 +122,22 @@ interface PlayerLite {
   category?: { id: number; name: string } | null;
 }
 
+interface WhatsAppResult {
+  ok: boolean;
+  skipped?: "already_sent" | "not_paid";
+  to?: string;
+  guardian?: string;
+  error?: string;
+}
+
+/** Texto del aviso que se muestra despues de guardar un pago PAGADO. */
+function whatsappNotice(w: WhatsAppResult | null | undefined): { tone: "ok" | "error"; text: string } | null {
+  if (!w || w.skipped === "not_paid") return null;
+  if (w.skipped === "already_sent") return { tone: "ok", text: "Pago guardado. El recibo ya se había enviado antes por WhatsApp." };
+  if (w.ok) return { tone: "ok", text: `Pago guardado. Recibo enviado por WhatsApp a ${w.guardian && w.guardian !== "familia" ? `${w.guardian} ` : ""}(${w.to}).` };
+  return { tone: "error", text: `Pago guardado, pero el recibo NO se pudo enviar por WhatsApp: ${w.error ?? "error desconocido"}` };
+}
+
 const emptyForm = {
   playerId: "" as string | number,
   conceptId: "" as string | number,
@@ -150,6 +166,8 @@ export default function PagosPage() {
   const [mMethod, setMMethod] = useState("NEQUI");
   const [mError, setMError] = useState<string | null>(null);
   const [mSaving, setMSaving] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [conceptsModalOpen, setConceptsModalOpen] = useState(false);
@@ -248,6 +266,7 @@ export default function PagosPage() {
         return;
       }
       setModalOpen(false);
+      setNotice(data?.payment?.status === "PAID" && data?.payment?.id ? whatsappNotice(await sendReceipt(data.payment.id)) : null);
       await loadData();
     } finally {
       setSaving(false);
@@ -262,11 +281,12 @@ export default function PagosPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ method }),
     });
+    const data = await res.json().catch(() => null);
     if (!res.ok) {
-      const data = await res.json();
-      alert(data.error ?? "No se pudo registrar el pago");
+      alert(data?.error ?? "No se pudo registrar el pago");
       return;
     }
+    setNotice(whatsappNotice(await sendReceipt(p.id)));
     await loadData();
   }
 
@@ -407,9 +427,43 @@ export default function PagosPage() {
         return;
       }
       setMonthModal(null);
+      const savedId: number | undefined = data?.payment?.id;
+      if (data?.payment?.status === "PAID" && savedId) {
+        setNotice({ tone: "ok", text: "Pago guardado. Enviando recibo por WhatsApp..." });
+        setNotice(whatsappNotice(await sendReceipt(savedId)));
+      } else {
+        setNotice(null);
+      }
       await loadData();
     } finally {
       setMSaving(false);
+    }
+  }
+
+  /** Envia el recibo por WhatsApp de un pago que acaba de quedar PAGADO (el servidor evita enviarlo dos veces). */
+  async function sendReceipt(paymentId: number): Promise<WhatsAppResult | null> {
+    const res = await fetch(`/api/payments/${paymentId}/receipt`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) return { ok: false, error: data?.error ?? "No se pudo enviar el recibo" };
+    return data?.whatsapp ?? null;
+  }
+
+  async function resendReceipt(paymentId: number) {
+    setResending(true);
+    try {
+      const res = await fetch(`/api/payments/${paymentId}/receipt?force=1`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      const w: WhatsAppResult | undefined = data?.whatsapp;
+      if (!res.ok || !w) {
+        setNotice({ tone: "error", text: data?.error ?? "No se pudo reenviar el recibo" });
+      } else if (w.ok) {
+        setNotice({ tone: "ok", text: `Recibo reenviado por WhatsApp (${w.to}).` });
+      } else {
+        setNotice({ tone: "error", text: `No se pudo reenviar el recibo: ${w.error ?? "error desconocido"}` });
+      }
+      setMonthModal(null);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -476,6 +530,17 @@ export default function PagosPage() {
           </button>
         </div>
       </div>
+
+      {notice && (
+        <div
+          className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 text-sm ${notice.tone === "ok" ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-700"}`}
+        >
+          <span>{notice.text}</span>
+          <button className="text-xs underline" onClick={() => setNotice(null)}>
+            Cerrar
+          </button>
+        </div>
+      )}
 
       <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
         <button
@@ -633,6 +698,16 @@ export default function PagosPage() {
                       <Download className="h-4 w-4" /> Descargar recibo
                     </a>
                   )}
+                  {pay?.effectiveStatus === "PAID" && (
+                    <button
+                      type="button"
+                      disabled={resending}
+                      onClick={() => resendReceipt(pay.id)}
+                      className="ml-4 mt-2 inline-flex items-center gap-1 text-green-700 underline"
+                    >
+                      <MessageCircle className="h-4 w-4" /> {resending ? "Enviando..." : "Reenviar por WhatsApp"}
+                    </button>
+                  )}
                 </div>
               );
             })()}
@@ -695,6 +770,9 @@ export default function PagosPage() {
             <button type="submit" disabled={mSaving} className="btn-primary w-full">
               {mSaving ? "Guardando..." : "Guardar"}
             </button>
+            {mStatus === "PAID" && monthModal.payment?.effectiveStatus !== "PAID" && (
+              <p className="text-center text-xs text-slate-400">Al guardar como Pagado se envía el recibo por WhatsApp al acudiente.</p>
+            )}
           </form>
         )}
       </Modal>
