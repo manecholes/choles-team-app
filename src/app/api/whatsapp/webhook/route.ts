@@ -50,8 +50,17 @@ export async function POST(req: NextRequest) {
             console.error("[WHATSAPP_WEBHOOK] Error procesando mensaje", err);
           });
         }
-        // value.statuses trae confirmaciones de entrega/lectura de mensajes
-        // que el bot envio -- no requieren accion, se ignoran a proposito.
+        // value.statuses trae las confirmaciones de entrega de los mensajes que
+        // envia el club (enviado / entregado / leido / fallido). Se registran en
+        // consola para poder ver en Railway por que un mensaje no llego.
+        for (const st of value?.statuses ?? []) {
+          const errors = (st?.errors ?? []).map((e: any) => `${e?.code} ${e?.title ?? ""} ${e?.error_data?.details ?? ""}`.trim());
+          const line = `[WHATSAPP_STATUS] ${st?.status} to=${st?.recipient_id} id=${st?.id}${errors.length ? ` errors=${errors.join(" | ")}` : ""}`;
+          // eslint-disable-next-line no-console
+          if (st?.status === "failed") console.error(line);
+          // eslint-disable-next-line no-console
+          else console.log(line);
+        }
       }
     }
   } catch (err) {
