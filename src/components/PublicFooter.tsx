@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LogoCrest } from "@/components/PublicHeader";
-import { buildMailtoLink, buildWhatsAppLink, CLUB_EMAIL, CLUB_WHATSAPP_NUMBER } from "@/lib/site-contact";
+import { buildMailtoLink, buildWhatsAppLinkTo, CLUB_EMAIL, CLUB_WHATSAPP_NUMBERS, prettyPhone } from "@/lib/site-contact";
 
 const LINKS = [
   { href: "/mision-vision", label: "Misión y visión" },
@@ -10,12 +10,6 @@ const LINKS = [
   { href: "/contacto", label: "Contáctenos" },
   { href: "/privacidad", label: "Política de privacidad" },
 ];
-
-/** "573246384445" -> "324 638 4445" (se muestra sin el indicativo de Colombia). */
-function prettyPhone(n: string) {
-  const local = n.startsWith("57") ? n.slice(2) : n;
-  return local.length === 10 ? `${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}` : local;
-}
 
 export function PublicFooter() {
   return (
@@ -35,10 +29,14 @@ export function PublicFooter() {
           ))}
         </nav>
         <div className="min-w-0 flex-[1_1_240px] text-base leading-[1.8]">
-          <a href={buildWhatsAppLink()} target="_blank" rel="noopener noreferrer" className="text-white underline-offset-4 hover:underline">
-            WhatsApp: {prettyPhone(CLUB_WHATSAPP_NUMBER)}
-          </a>
-          <br />
+          {CLUB_WHATSAPP_NUMBERS.map((n) => (
+            <span key={n}>
+              <a href={buildWhatsAppLinkTo(n)} target="_blank" rel="noopener noreferrer" className="text-white underline-offset-4 hover:underline">
+                WhatsApp: {prettyPhone(n)}
+              </a>
+              <br />
+            </span>
+          ))}
           <a href={buildMailtoLink()} className="text-white underline-offset-4 hover:underline">
             {CLUB_EMAIL}
           </a>
