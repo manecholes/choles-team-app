@@ -57,6 +57,8 @@ function isPublic(pathname: string) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/public") ||
+    // Fotos y escudo de la pagina de inicio (carpeta public/landing).
+    pathname.startsWith("/landing/") ||
     isPublicApiMedia(pathname)
   );
 }
