@@ -1,7 +1,7 @@
 import { Mail, MessageCircle } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
-import { buildMailtoLink, buildWhatsAppLink, CLUB_EMAIL } from "@/lib/site-contact";
+import { buildMailtoLink, buildWhatsAppLinkTo, CLUB_EMAIL, CLUB_WHATSAPP_NUMBERS, prettyPhone } from "@/lib/site-contact";
 
 /** Pagina publica: Contactenos (sin sesion). */
 export default function ContactoPage() {
@@ -23,19 +23,26 @@ export default function ContactoPage() {
 
       <section className="mx-auto max-w-3xl px-6 py-14">
         <div className="grid gap-6 sm:grid-cols-2">
-          <a
-            href={buildWhatsAppLink(whatsappMessage)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card flex flex-col items-center gap-3 text-center transition hover:shadow-md"
-          >
+          <div className="card flex flex-col items-center gap-3 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
               <MessageCircle className="h-7 w-7" />
             </span>
             <h2 className="font-semibold text-turqui-700">Escribir por WhatsApp</h2>
             <p className="text-sm text-slate-500">Respuesta rapida para inscripciones, horarios y dudas.</p>
-            <span className="btn-primary mt-2">Abrir WhatsApp</span>
-          </a>
+            <div className="mt-2 flex flex-col gap-2">
+              {CLUB_WHATSAPP_NUMBERS.map((n) => (
+                <a
+                  key={n}
+                  href={buildWhatsAppLinkTo(n, whatsappMessage)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary justify-center"
+                >
+                  WhatsApp {prettyPhone(n)}
+                </a>
+              ))}
+            </div>
+          </div>
 
           <a
             href={buildMailtoLink("Informacion sobre Choles Team")}
